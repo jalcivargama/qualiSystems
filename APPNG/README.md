@@ -4,10 +4,12 @@ Prototipo navegable creado con Angular 21 standalone. Incluye inicio de sesión 
 
 ## Ejecutar
 
-Requiere Node.js compatible con Angular 21 (Node.js 20.19 o posterior).
+Requiere Node.js compatible con Angular 21. Se recomienda Node.js 24 LTS y npm 11.19.0.
+Consultar la [guía de instalación y despliegue](../GUIA_INSTALACION_DESPLIEGUE.md)
+para los requisitos, la compilación de producción y el empaquetado WAR.
 
 ```powershell
-npm install
+npm ci
 npm start
 ```
 
