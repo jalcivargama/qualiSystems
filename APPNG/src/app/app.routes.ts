@@ -2,11 +2,24 @@ import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from './core/auth.service';
-import { CatalogComponent } from './pages/catalog.component';
-import { DashboardComponent } from './pages/dashboard.component';
-import { ExploradorDependenciasComponent } from './pages/explorador-dependencias.component';
-import { LoginComponent } from './pages/login.component';
 import { ShellComponent } from './layout/shell.component';
+import { LoginComponent } from './pages/login/login.component';
+import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { ExploradorDependenciasComponent } from './pages/explorador-dependencias/explorador-dependencias.component';
+import { ComponentesComponent } from './modules/catalogo-principal/components/componentes/componentes.component';
+import { SistemasComponent } from './modules/catalogo-principal/components/sistemas/sistemas.component';
+import { ApisComponent } from './modules/catalogo-principal/components/apis/apis.component';
+import { BasesDeDatosComponent } from './modules/catalogo-principal/components/bases-de-datos/bases-de-datos.component';
+import { InfraestructuraComponent } from './modules/catalogo-principal/components/infraestructura/infraestructura.component';
+import { DesplieguesComponent } from './modules/operacion/components/despliegues/despliegues.component';
+import { PersonasComponent } from './modules/personas-y-roles/components/personas/personas.component';
+import { RolesDeResponsabilidadComponent } from './modules/personas-y-roles/components/roles-de-responsabilidad/roles-de-responsabilidad.component';
+import { ResponsablesDeSistemasComponent } from './modules/personas-y-roles/components/responsables-de-sistemas/responsables-de-sistemas.component';
+import { TecnologiasComponent } from './modules/tecnologia/components/tecnologias/tecnologias.component';
+import { StackTecnologicoComponent } from './modules/tecnologia/components/stack-tecnologico/stack-tecnologico.component';
+import { TiposDeDependenciaComponent } from './modules/dependencias/components/tipos-de-dependencia/tipos-de-dependencia.component';
+import { DependenciasComponent } from './modules/dependencias/components/dependencias/dependencias.component';
+import { FlujosDeDatosComponent } from './modules/dependencias/components/flujos-de-datos/flujos-de-datos.component';
 
 const requireSession = () => {
   const auth = inject(AuthService);
@@ -24,7 +37,20 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', component: DashboardComponent },
       { path: 'explorador-dependencias', component: ExploradorDependenciasComponent },
-      { path: 'catalogos/:table', component: CatalogComponent },
+      { path: 'catalogos/catalog_component', component: ComponentesComponent },
+      { path: 'catalogos/system_detail', component: SistemasComponent },
+      { path: 'catalogos/api_detail', component: ApisComponent },
+      { path: 'catalogos/database_detail', component: BasesDeDatosComponent },
+      { path: 'catalogos/infrastructure_detail', component: InfraestructuraComponent },
+      { path: 'catalogos/system_deployment', component: DesplieguesComponent },
+      { path: 'catalogos/person', component: PersonasComponent },
+      { path: 'catalogos/responsibility_role', component: RolesDeResponsabilidadComponent },
+      { path: 'catalogos/system_responsibility', component: ResponsablesDeSistemasComponent },
+      { path: 'catalogos/technology', component: TecnologiasComponent },
+      { path: 'catalogos/component_technology', component: StackTecnologicoComponent },
+      { path: 'catalogos/dependency_type', component: TiposDeDependenciaComponent },
+      { path: 'catalogos/dependency', component: DependenciasComponent },
+      { path: 'catalogos/data_flow', component: FlujosDeDatosComponent },
     ],
   },
   { path: '**', redirectTo: 'dashboard' },
