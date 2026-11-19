@@ -307,5 +307,5 @@ WAR compilado para `/qualiSystems/` esperando que funcione en `/`.
 | Los datos no aparecen en otro navegador | Es el comportamiento actual: se guardan en `localStorage`, no en un backend. |
 
 Para restablecer los datos de demostracion, eliminar las claves `appng.mock.*`
-y `appng.mock.session` desde el almacenamiento local en las herramientas del
+y `TOKEN` desde el almacenamiento local en las herramientas del
 navegador. Esto elimina los cambios guardados localmente.

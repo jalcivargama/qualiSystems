@@ -28,11 +28,19 @@
       <h2>Inicia sesión</h2>
       <p class="login-subtitle">Ingresa tus credenciales para continuar al catálogo.</p>
 
-      <form (ngSubmit)="submit()" #loginForm="ngForm">
+      <form [formGroup]="loginForm" (ngSubmit)="submit()">
         <label for="username">Usuario</label>
         <div class="input-wrap">
           <span aria-hidden="true">＠</span>
-          <input id="username" name="username" [(ngModel)]="username" autocomplete="username" required placeholder="Tu usuario" />
+          <input
+            id="username"
+            name="username"
+            formControlName="username"
+            autocomplete="username"
+            required
+            placeholder="Tu usuario"
+            (keydown)="transformToUpperCase($event)"
+          />
         </div>
 
         <div class="password-label">
@@ -43,10 +51,10 @@
         </div>
         <div class="input-wrap">
           <span aria-hidden="true">⌑</span>
-          <input id="password" name="password" [(ngModel)]="password" [type]="showPassword ? 'text' : 'password'" autocomplete="current-password" required placeholder="Tu contraseña" />
+          <input id="password" name="password" formControlName="password" [type]="showPassword ? 'text' : 'password'" autocomplete="current-password" required placeholder="Tu contraseña" />
         </div>
 
-        @if (error) {
+        @if (formError) {
           <div class="login-error" role="alert">{{ error }}</div>
         }
         <button class="login-submit" type="submit" [disabled]="loginForm.invalid">
