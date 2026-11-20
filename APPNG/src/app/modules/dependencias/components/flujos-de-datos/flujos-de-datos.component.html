@@ -8,6 +8,7 @@
     <h1>Flujos de datos</h1>
     <p>Datos intercambiados, periodicidad, sensibilidad y formato.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -56,7 +57,7 @@
           @for (row of filteredRows(); track row._rowId) {
             <tr>
               <td [title]="row.dataFlowId">{{ row.dataFlowId || '—' }}</td>
-              <td [title]="row.dependencyId">{{ row.dependencyId || '—' }}</td>
+              <td [title]="dependencyLabel(row.dependencyId)">{{ dependencyLabel(row.dependencyId) }}</td>
               <td [title]="row.dataName || ''">{{ row.dataName || '—' }}</td>
               <td [title]="row.periodicity || ''">{{ row.periodicity || '—' }}</td>
               <td [title]="labelForSensitivity(row.sensitivity)">{{ labelForSensitivity(row.sensitivity) }}</td>
@@ -72,7 +73,7 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'No hay flujos de datos registrados todavía.'
+                      : 'Crea el primer flujo de datos para comenzar.'
                   }}
                 </small>
               </td>
@@ -86,3 +87,113 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear flujo de datos">
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">data_flow</span>
+          <h2>Nuevo flujo de datos</h2>
+          <p>Asocia el flujo a una dependencia y describe el dato intercambiado.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-dependencyId">Dependencia <i>*</i></label>
+            <select
+              id="field-dependencyId"
+              name="dependencyId"
+              [ngModel]="form.dependencyId"
+              (ngModelChange)="onDependencyIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona una dependencia</option>
+              @for (dependency of dependencies(); track dependency.dependencyId) {
+                <option [ngValue]="+dependency.dependencyId!">
+                  {{ dependencyLabel(dependency.dependencyId) }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-dataName">Dato intercambiado <i>*</i></label>
+            <input
+              id="field-dataName"
+              name="dataName"
+              type="text"
+              [(ngModel)]="form.dataName"
+              required
+              maxlength="200"
+              placeholder="Ej. Movimientos de inventario"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-periodicity">Periodicidad</label>
+            <input
+              id="field-periodicity"
+              name="periodicity"
+              type="text"
+              [(ngModel)]="form.periodicity"
+              maxlength="100"
+              placeholder="Ej. Diaria"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-sensitivity">Sensibilidad</label>
+            <select id="field-sensitivity" name="sensitivity" [(ngModel)]="form.sensitivity">
+              <option value="">Sin definir</option>
+              @for (option of sensitivityOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-dataFormat">Formato</label>
+            <input
+              id="field-dataFormat"
+              name="dataFormat"
+              type="text"
+              [(ngModel)]="form.dataFormat"
+              maxlength="100"
+              placeholder="Ej. JSON"
+            />
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-description">Descripción</label>
+            <textarea
+              id="field-description"
+              name="description"
+              [(ngModel)]="form.description"
+              rows="3"
+              placeholder="Describe el flujo de datos"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

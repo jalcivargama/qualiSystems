@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { DataFlow } from './models/data-flow.model';
+import { DataFlow, DataFlowRequest } from './models/data-flow.model';
 
 @Injectable({ providedIn: 'root' })
 export class DataFlowsService {
@@ -12,5 +12,9 @@ export class DataFlowsService {
 
   getAllDataFlows(): Observable<DataFlow[]> {
     return this.http.get<DataFlow[]>(`${this.baseUrl}/catalogos/data-flows`);
+  }
+
+  createDataFlow(body: DataFlowRequest): Observable<DataFlow> {
+    return this.http.post<DataFlow>(`${this.baseUrl}/catalogos/data-flows`, body);
   }
 }
