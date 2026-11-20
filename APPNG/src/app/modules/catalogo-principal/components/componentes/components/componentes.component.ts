@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
@@ -54,22 +54,19 @@ export class ComponentesComponent implements OnInit {
     this.activeFlagOptions.map((option) => [option.value, option.label]),
   ) as Record<ActiveFlag, string>;
 
-  rows: ComponentRow[] = [];
-  loading = false;
-  searchTerm = '';
-  modalOpen = false;
-  saving = false;
-  formError = '';
+  readonly rows = signal<ComponentRow[]>([]);
+  readonly loading = signal(false);
+  readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
   form: CreateForm = this.emptyForm();
 
-  ngOnInit(): void {
-    this.loadComponents();
-  }
-
-  get filteredRows(): ComponentRow[] {
-    const query = this.searchTerm.trim().toLocaleLowerCase();
-    if (!query) return this.rows;
-    return this.rows.filter((row) =>
+  readonly filteredRows = computed(() => {
+    const query = this.searchTerm().trim().toLocaleLowerCase();
+    const rows = this.rows();
+    if (!query) return rows;
+    return rows.filter((row) =>
       [
         this.labelForComponentType(row.componentType),
         row.name,
@@ -78,6 +75,10 @@ export class ComponentesComponent implements OnInit {
         this.labelForActiveFlag(row.isActive),
       ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query)),
     );
+  });
+
+  ngOnInit(): void {
+    this.loadComponents();
   }
 
   labelForComponentType(value: string | null | undefined): string {
@@ -92,33 +93,37 @@ export class ComponentesComponent implements OnInit {
 
   openCreate(): void {
     this.form = this.emptyForm();
-    this.formError = '';
-    this.modalOpen = true;
+    this.formError.set('');
+    this.modalOpen.set(true);
   }
 
   closeModal(): void {
-    this.modalOpen = false;
-    this.formError = '';
-    this.saving = false;
+    this.modalOpen.set(false);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  clearSearch(): void {
+    this.searchTerm.set('');
   }
 
   save(): void {
-    if (this.saving) return;
+    if (this.saving()) return;
 
     const name = this.form.name.trim();
     if (!this.form.componentType || !name || !this.form.isActive) {
-      this.formError = 'Completa los campos obligatorios.';
+      this.formError.set('Completa los campos obligatorios.');
       return;
     }
 
     if (name.length > 200) {
-      this.formError = 'El nombre no puede superar 200 caracteres.';
+      this.formError.set('El nombre no puede superar 200 caracteres.');
       return;
     }
 
     const acronym = this.form.acronym.trim();
     if (acronym.length > 50) {
-      this.formError = 'El acrónimo no puede superar 50 caracteres.';
+      this.formError.set('El acrónimo no puede superar 50 caracteres.');
       return;
     }
 
@@ -132,8 +137,8 @@ export class ComponentesComponent implements OnInit {
     const description = this.form.description.trim();
     if (description) dto.description = description;
 
-    this.saving = true;
-    this.formError = '';
+    this.saving.set(true);
+    this.formError.set('');
 
     this.componentsService.createNewComponent(dto).subscribe({
       next: () => {
@@ -142,22 +147,22 @@ export class ComponentesComponent implements OnInit {
         this.loadComponents();
       },
       error: (error: HttpErrorResponse) => {
-        this.saving = false;
+        this.saving.set(false);
         this.toastService.error(this.resolveErrorMessage(error, 'create'));
       },
     });
   }
 
   private loadComponents(): void {
-    this.loading = true;
+    this.loading.set(true);
     this.componentsService.getComponents().subscribe({
       next: (components) => {
-        this.rows = components.map((component) => this.toRow(component));
-        this.loading = false;
+        this.rows.set(components.map((component) => this.toRow(component)));
+        this.loading.set(false);
       },
       error: (error: HttpErrorResponse) => {
-        this.loading = false;
-        this.rows = [];
+        this.loading.set(false);
+        this.rows.set([]);
         this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });

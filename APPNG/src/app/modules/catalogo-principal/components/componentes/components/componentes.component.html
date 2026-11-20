@@ -15,15 +15,20 @@
   <div class="catalog-count">
     <span class="table-icon">▤</span>
     <strong>catalog_component</strong>
-    <span class="record-count">{{ filteredRows.length }} registros</span>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
   </div>
   <div class="toolbar-actions">
     <label class="search-box">
       <span>⌕</span>
-      <input [(ngModel)]="searchTerm" placeholder="Buscar registros..." aria-label="Buscar registros" />
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
       <kbd>⌘ K</kbd>
     </label>
-    <button class="filter-button" type="button" (click)="searchTerm = ''"><span>☷</span> Limpiar</button>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
   </div>
 </div>
 
@@ -41,14 +46,14 @@
         </tr>
       </thead>
       <tbody>
-        @if (loading) {
+        @if (loading()) {
           <tr>
             <td class="empty-cell" colspan="6">
               <strong>Cargando componentes...</strong>
             </td>
           </tr>
         } @else {
-          @for (row of filteredRows; track row._rowId) {
+          @for (row of filteredRows(); track row._rowId) {
             <tr>
               <td [title]="row.componentId">{{ row.componentId || '—' }}</td>
               <td [title]="labelForComponentType(row.componentType)">{{ labelForComponentType(row.componentType) }}</td>
@@ -61,9 +66,9 @@
             <tr>
               <td class="empty-cell" colspan="6">
                 <span class="empty-illustration">▤</span>
-                <strong>{{ searchTerm ? 'No encontramos resultados' : 'Aún no hay registros' }}</strong>
-                <small>{{ searchTerm ? 'Prueba con otro término de búsqueda.' : 'Crea el primer componente para comenzar.' }}</small>
-                @if (!searchTerm) {
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Aún no hay registros' }}</strong>
+                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea el primer componente para comenzar.' }}</small>
+                @if (!searchTerm()) {
                   <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
                 }
               </td>
@@ -74,11 +79,11 @@
     </table>
   </div>
   <div class="table-footer">
-    <span>Mostrando <strong>{{ filteredRows.length }}</strong> de <strong>{{ rows.length }}</strong> registros</span>
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
 
-@if (modalOpen) {
+@if (modalOpen()) {
   <div class="modal-backdrop" (click)="closeModal()">
     <section
       class="record-modal"
@@ -153,14 +158,14 @@
           </div>
         </div>
 
-        @if (formError) {
-          <div class="error-banner" role="alert">{{ formError }}</div>
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
         }
 
         <div class="modal-actions">
-          <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving">Cancelar</button>
-          <button type="submit" class="primary-button" [disabled]="saving">
-            {{ saving ? 'Creando...' : 'Crear registro' }}
+          <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">Cancelar</button>
+          <button type="submit" class="primary-button" [disabled]="saving()">
+            {{ saving() ? 'Creando...' : 'Crear registro' }}
           </button>
         </div>
       </form>
