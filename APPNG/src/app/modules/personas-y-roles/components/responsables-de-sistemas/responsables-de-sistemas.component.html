@@ -8,6 +8,7 @@
     <h1>Responsables de sistemas</h1>
     <p>Asignaciones de personas y roles a los sistemas.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -66,7 +67,7 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'No hay responsables de sistemas registrados todavía.'
+                      : 'Crea la primera asignación de responsable para comenzar.'
                   }}
                 </small>
               </td>
@@ -80,3 +81,104 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Crear responsabilidad de sistema"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">system_responsibility</span>
+          <h2>Nueva responsabilidad</h2>
+          <p>Asigna una persona y un rol a un sistema.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-componentId">Sistema <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un sistema</option>
+              @for (component of systemComponents(); track component.componentId) {
+                <option [ngValue]="+component.componentId!">{{ component.name }}</option>
+              }
+            </select>
+            <small class="field-hint">Solo componentes tipo SISTEMA.</small>
+          </div>
+
+          <div class="form-field">
+            <label for="field-personId">Persona <i>*</i></label>
+            <select
+              id="field-personId"
+              name="personId"
+              [ngModel]="form.personId"
+              (ngModelChange)="onPersonIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona una persona</option>
+              @for (person of people(); track person.personId) {
+                <option [ngValue]="+person.personId!">{{ personOptionLabel(person) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-roleId">Rol <i>*</i></label>
+            <select
+              id="field-roleId"
+              name="roleId"
+              [ngModel]="form.roleId"
+              (ngModelChange)="onRoleIdChange($event)"
+              required
+              [disabled]="form.componentId == null || form.personId == null"
+            >
+              <option [ngValue]="null">Selecciona un rol</option>
+              @for (role of availableRoles(); track role.roleId) {
+                <option [ngValue]="+role.roleId!">{{ roleOptionLabel(role) }}</option>
+              }
+            </select>
+            <small class="field-hint">Excluye roles ya asignados a esa persona en el sistema.</small>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-notes">Notas</label>
+            <textarea
+              id="field-notes"
+              name="notes"
+              [(ngModel)]="form.notes"
+              rows="3"
+              placeholder="Notas sobre la responsabilidad"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

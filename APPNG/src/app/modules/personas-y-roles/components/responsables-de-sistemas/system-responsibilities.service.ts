@@ -15,4 +15,11 @@ export class SystemResponsibilitiesService {
       `${this.baseUrl}/catalogos/system-responsibilities`,
     );
   }
+
+  createSystemResponsibility(body: SystemResponsibility): Observable<SystemResponsibility> {
+    return this.http.post<SystemResponsibility>(
+      `${this.baseUrl}/catalogos/system-responsibilities`,
+      body,
+    );
+  }
 }
