@@ -38,4 +38,8 @@ export class InfrastructureDetailsService {
       body,
     );
   }
+
+  deleteInfrastructureDetail(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/infrastructure-details/${id}`);
+  }
 }
