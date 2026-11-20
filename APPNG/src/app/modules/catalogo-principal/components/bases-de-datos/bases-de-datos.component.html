@@ -8,6 +8,7 @@
     <h1>Bases de datos</h1>
     <p>Motores, instancias y esquemas asociados al catálogo.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -68,7 +69,7 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'Aún no base de datos registradas.'
+                      : 'Crea el primer detalle de base de datos para comenzar.'
                   }}
                 </small>
               </td>
@@ -82,3 +83,114 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Crear detalle de base de datos"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">database_detail</span>
+          <h2>Nuevo detalle de base de datos</h2>
+          <p>Selecciona un componente BASE DE DATOS y completa sus datos.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-componentId">Componente BASE DE DATOS <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              <option
+                *ngFor="let component of availableDatabaseComponents()"
+                [ngValue]="+component.componentId!"
+              >
+                {{ component.name }}
+              </option>
+            </select>
+            <small class="field-hint">Solo componentes tipo BASE DE DATOS activos y sin detalle asociado.</small>
+            @if (availableDatabaseComponents().length === 0) {
+              <small class="field-hint">No hay componentes BASE DE DATOS activos disponibles para asociar.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-engine">Motor <i>*</i></label>
+            <input
+              id="field-engine"
+              name="engine"
+              type="text"
+              [(ngModel)]="form.engine"
+              maxlength="100"
+              required
+              placeholder="Ej. Oracle"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-engineVersion">Versión</label>
+            <input
+              id="field-engineVersion"
+              name="engineVersion"
+              type="text"
+              [(ngModel)]="form.engineVersion"
+              maxlength="100"
+              placeholder="Ej. 19c"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-instanceName">Instancia</label>
+            <input
+              id="field-instanceName"
+              name="instanceName"
+              type="text"
+              [(ngModel)]="form.instanceName"
+              maxlength="200"
+              placeholder="Ej. PRODDB"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-schemaName">Esquema</label>
+            <input
+              id="field-schemaName"
+              name="schemaName"
+              type="text"
+              [(ngModel)]="form.schemaName"
+              maxlength="200"
+              placeholder="Ej. CATSYS"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

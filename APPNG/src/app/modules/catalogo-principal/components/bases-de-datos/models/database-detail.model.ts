@@ -7,3 +7,6 @@ export interface DatabaseDetail {
   instanceName?: string | null;
   schemaName?: string | null;
 }
+
+/** Body para CREATE (sin componentType) */
+export type DatabaseDetailRequest = Omit<DatabaseDetail, 'componentType'>;
