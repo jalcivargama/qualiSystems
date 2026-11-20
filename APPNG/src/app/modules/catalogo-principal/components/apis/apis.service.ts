@@ -1,16 +1,16 @@
-import { Injectable } from "@angular/core";
-import { environment } from "../../../../../environments/environment";
-import { HttpClient } from "@angular/common/http";
-import { Observable } from "rxjs";
-import { ApiResponse } from "../../../../shared/models/response.type";
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
+import { ApiDetail } from './models/api-detail.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApisService {
-    private baseUrl = environment.apiUrl;
+  private readonly baseUrl = environment.apiUrl;
 
-    constructor(
-        private http: HttpClient,
-    ){}
+  constructor(private readonly http: HttpClient) {}
 
-    
+  getAllApiDetails(): Observable<ApiDetail[]> {
+    return this.http.get<ApiDetail[]>(`${this.baseUrl}/catalogos/api-details`);
+  }
 }
