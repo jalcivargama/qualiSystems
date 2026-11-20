@@ -52,6 +52,7 @@ export class TecnologiasComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingTechnologyId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: TechnologyForm = this.emptyForm();
 
@@ -108,10 +109,40 @@ export class TecnologiasComponent implements OnInit {
     this.editingTechnologyId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingTechnologyId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar la tecnología a eliminar.');
+      return;
+    }
+
+    if (!window.confirm(`¿Eliminar la tecnología "${this.form.name.trim() || id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.technologiesService.deleteTechnology(id).subscribe({
+      next: () => {
+        this.toastService.success('Tecnología eliminada correctamente');
+        this.closeModal();
+        this.loadTechnologies();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const category = this.form.category;
     const name = this.form.name.trim();
@@ -197,7 +228,7 @@ export class TecnologiasComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -208,11 +239,14 @@ export class TecnologiasComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'La tecnología no existe o ya fue eliminada.';
     if (error.status === 409) {
-      return 'Conflicto: ya existe una tecnología con esa categoría y nombre.';
+      return action === 'delete'
+        ? 'No se puede eliminar: la tecnología tiene registros relacionados.'
+        : 'Conflicto: ya existe una tecnología con esa categoría y nombre.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar las tecnologías.';
     if (action === 'update') return 'No fue posible actualizar la tecnología.';
+    if (action === 'delete') return 'No fue posible eliminar la tecnología.';
     return 'No fue posible crear la tecnología.';
   }
 }

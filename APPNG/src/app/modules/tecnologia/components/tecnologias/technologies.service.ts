@@ -21,4 +21,8 @@ export class TechnologiesService {
   updateTechnology(id: number, body: TechnologyRequest): Observable<Technology> {
     return this.http.put<Technology>(`${this.baseUrl}/catalogos/technologies/${id}`, body);
   }
+
+  deleteTechnology(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/technologies/${id}`);
+  }
 }
