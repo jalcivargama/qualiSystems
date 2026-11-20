@@ -21,4 +21,8 @@ export class DependenciesService {
   updateDependency(id: number, body: DependencyRequest): Observable<Dependency> {
     return this.http.put<Dependency>(`${this.baseUrl}/catalogos/dependencies/${id}`, body);
   }
+
+  deleteDependency(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/dependencies/${id}`);
+  }
 }

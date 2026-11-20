@@ -80,6 +80,7 @@ export class DependenciasComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingDependencyId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   readonly selectedOriginId = signal<number | null>(null);
   form: DependencyForm = this.emptyForm();
@@ -222,10 +223,43 @@ export class DependenciasComponent implements OnInit {
     this.selectedOriginId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingDependencyId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar la dependencia a eliminar.');
+      return;
+    }
+
+    const origin = this.componentName(this.form.originComponentId);
+    const target = this.componentName(this.form.targetComponentId);
+    const label = `${origin} → ${target}`;
+    if (!window.confirm(`¿Eliminar la dependencia "${label}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.dependenciesService.deleteDependency(id).subscribe({
+      next: () => {
+        this.toastService.success('Dependencia eliminada correctamente');
+        this.closeModal();
+        this.loadDependencies();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const originComponentId = this.toId(this.form.originComponentId);
     const targetComponentId = this.toId(this.form.targetComponentId);
@@ -368,7 +402,7 @@ export class DependenciasComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -379,11 +413,14 @@ export class DependenciasComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'La dependencia no existe o ya fue eliminada.';
     if (error.status === 409) {
-      return 'Conflicto: revisa que origen, destino y tipo existan y no violen restricciones.';
+      return action === 'delete'
+        ? 'No se puede eliminar: la dependencia tiene flujos de datos u otras relaciones asociadas.'
+        : 'Conflicto: revisa que origen, destino y tipo existan y no violen restricciones.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar las dependencias.';
     if (action === 'update') return 'No fue posible actualizar la dependencia.';
+    if (action === 'delete') return 'No fue posible eliminar la dependencia.';
     return 'No fue posible crear la dependencia.';
   }
 }
