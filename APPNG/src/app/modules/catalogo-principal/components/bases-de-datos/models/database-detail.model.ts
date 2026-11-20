@@ -1,0 +1,9 @@
+/** Entidad que regresa la API */
+export interface DatabaseDetail {
+  componentId: number;
+  componentType?: 'DATABASE';
+  engine: string;
+  engineVersion?: string | null;
+  instanceName?: string | null;
+  schemaName?: string | null;
+}
