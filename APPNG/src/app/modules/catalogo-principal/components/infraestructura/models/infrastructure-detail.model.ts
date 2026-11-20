@@ -12,3 +12,6 @@ export interface InfrastructureDetail {
 
 /** Body para CREATE (sin componentType) */
 export type InfrastructureDetailRequest = Omit<InfrastructureDetail, 'componentType'>;
+
+/** Body para UPDATE (sin componentType) */
+export type InfrastructureDetailUpdateRequest = Omit<InfrastructureDetail, 'componentType'>;

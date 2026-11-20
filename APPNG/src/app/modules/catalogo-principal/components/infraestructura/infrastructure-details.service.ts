@@ -5,6 +5,7 @@ import { environment } from '../../../../../environments/environment';
 import {
   InfrastructureDetail,
   InfrastructureDetailRequest,
+  InfrastructureDetailUpdateRequest,
 } from './models/infrastructure-detail.model';
 
 @Injectable({ providedIn: 'root' })
@@ -24,6 +25,16 @@ export class InfrastructureDetailsService {
   ): Observable<InfrastructureDetail> {
     return this.http.post<InfrastructureDetail>(
       `${this.baseUrl}/catalogos/infrastructure-details`,
+      body,
+    );
+  }
+
+  updateInfrastructureDetail(
+    id: number,
+    body: InfrastructureDetailUpdateRequest,
+  ): Observable<InfrastructureDetail> {
+    return this.http.put<InfrastructureDetail>(
+      `${this.baseUrl}/catalogos/infrastructure-details/${id}`,
       body,
     );
   }

@@ -42,12 +42,13 @@
           <th>Dirección IP</th>
           <th>Sistema operativo</th>
           <th>Modelo de alojamiento</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="5">
+            <td class="empty-cell" colspan="6">
               <strong>Cargando infraestructura...</strong>
             </td>
           </tr>
@@ -61,10 +62,21 @@
               <td [title]="labelForHostingModel(row.hostingModel)">
                 {{ labelForHostingModel(row.hostingModel) }}
               </td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + componentName(row.componentId)"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="5">
+              <td class="empty-cell" colspan="6">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -74,6 +86,9 @@
                       : 'Crea el primer detalle de infraestructura para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -92,13 +107,19 @@
       class="record-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Crear detalle de infraestructura"
+      [attr.aria-label]="isEditing() ? 'Editar detalle de infraestructura' : 'Crear detalle de infraestructura'"
     >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">infrastructure_detail</span>
-          <h2>Nuevo detalle de infraestructura</h2>
-          <p>Selecciona un componente INFRAESTRUCTURA y completa sus datos.</p>
+          <h2>{{ isEditing() ? 'Editar detalle de infraestructura' : 'Nuevo detalle de infraestructura' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos de la infraestructura seleccionada.'
+                : 'Selecciona un componente INFRAESTRUCTURA y completa sus datos.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -185,7 +206,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>
