@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { CreateNewComponentDto } from './models/create.component.dto';
 import { CreateComponentResponseDto } from './models/create.component.response.dto';
-import { CatalogComponent } from './models/catalog.component';
+import { CatalogComponent, UpdateComponentDto } from './models/catalog.component';
 
 @Injectable({ providedIn: 'root' })
 export class ComponentsService {
@@ -18,5 +18,9 @@ export class ComponentsService {
 
   createNewComponent(dto: CreateNewComponentDto): Observable<CreateComponentResponseDto> {
     return this.http.post<CreateComponentResponseDto>(`${this.baseUrl}/catalogos/componentes`, dto);
+  }
+
+  updateComponent(id: number, body: UpdateComponentDto): Observable<CatalogComponent> {
+    return this.http.put<CatalogComponent>(`${this.baseUrl}/catalogos/componentes/${id}`, body);
   }
 }

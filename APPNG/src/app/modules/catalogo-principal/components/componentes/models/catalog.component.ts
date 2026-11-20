@@ -10,3 +10,6 @@ export interface CatalogComponent {
   createdAt?: string;
   updatedAt?: string;
 }
+
+export type UpdateComponentDto = Omit<CatalogComponent, 'componentId' | 'createdAt' | 'updatedAt'>;
+

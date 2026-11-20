@@ -43,12 +43,13 @@
           <th>Acrónimo</th>
           <th>Descripción</th>
           <th>Activo</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="6">
+            <td class="empty-cell" colspan="7">
               <strong>Cargando componentes...</strong>
             </td>
           </tr>
@@ -61,10 +62,21 @@
               <td [title]="row.acronym || ''">{{ row.acronym || '—' }}</td>
               <td [title]="row.description || ''">{{ row.description || '—' }}</td>
               <td [title]="labelForActiveFlag(row.isActive)">{{ labelForActiveFlag(row.isActive) }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + row.name"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="6">
+              <td class="empty-cell" colspan="7">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Aún no hay registros' }}</strong>
                 <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea el primer componente para comenzar.' }}</small>
@@ -89,14 +101,20 @@
       class="record-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Crear componente"
+      [attr.aria-label]="isEditing() ? 'Editar componente' : 'Crear componente'"
       (click)="$event.stopPropagation()"
     >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">catalog_component</span>
-          <h2>Nuevo componente</h2>
-          <p>Completa los campos para registrarlo en el catálogo.</p>
+          <h2>{{ isEditing() ? 'Editar componente' : 'Nuevo componente' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos del componente seleccionado.'
+                : 'Completa los campos para registrarlo en el catálogo.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -165,7 +183,11 @@
         <div class="modal-actions">
           <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">Cancelar</button>
           <button type="submit" class="primary-button" [disabled]="saving()">
-            {{ saving() ? 'Creando...' : 'Crear registro' }}
+            @if (saving()) {
+              {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+            } @else {
+              {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+            }
           </button>
         </div>
       </form>

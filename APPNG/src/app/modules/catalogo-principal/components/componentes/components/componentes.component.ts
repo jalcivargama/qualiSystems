@@ -10,7 +10,7 @@ import {
   ComponentType,
   CreateNewComponentDto,
 } from '../models/create.component.dto';
-import { CatalogComponent } from '../models/catalog.component';
+import { CatalogComponent, UpdateComponentDto } from '../models/catalog.component';
 
 type ComponentRow = CatalogComponent & { _rowId: string };
 
@@ -58,6 +58,8 @@ export class ComponentesComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: CreateForm = this.emptyForm();
@@ -92,13 +94,31 @@ export class ComponentesComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  openEdit(row: ComponentRow): void {
+    this.isEditing.set(true);
+    this.editingComponentId.set(row.componentId ?? null);
+    this.form = {
+      componentType: row.componentType,
+      name: row.name ?? '',
+      acronym: row.acronym ?? '',
+      description: row.description ?? '',
+      isActive: (row.isActive === 'N' ? 'N' : 'Y') as ActiveFlag,
+    };
     this.formError.set('');
     this.modalOpen.set(true);
   }
 
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -127,20 +147,49 @@ export class ComponentesComponent implements OnInit {
       return;
     }
 
-    const dto: CreateNewComponentDto = {
+    const description = this.form.description.trim();
+    this.saving.set(true);
+    this.formError.set('');
+
+    if (this.isEditing()) {
+      const id = this.editingComponentId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar el componente a actualizar.');
+        return;
+      }
+
+      const updateDto: UpdateComponentDto = {
+        componentType: this.form.componentType,
+        name,
+        acronym: acronym || null,
+        description: description || null,
+        isActive: this.form.isActive,
+      };
+
+      this.componentsService.updateComponent(id, updateDto).subscribe({
+        next: () => {
+          this.toastService.success('Componente actualizado correctamente');
+          this.closeModal();
+          this.loadComponents();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createDto: CreateNewComponentDto = {
       componentType: this.form.componentType,
       name,
       isActive: this.form.isActive,
     };
+    if (acronym) createDto.acronym = acronym;
+    if (description) createDto.description = description;
 
-    if (acronym) dto.acronym = acronym;
-    const description = this.form.description.trim();
-    if (description) dto.description = description;
-
-    this.saving.set(true);
-    this.formError.set('');
-
-    this.componentsService.createNewComponent(dto).subscribe({
+    this.componentsService.createNewComponent(createDto).subscribe({
       next: () => {
         this.toastService.success('Componente creado correctamente');
         this.closeModal();
@@ -185,7 +234,10 @@ export class ComponentesComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -193,10 +245,11 @@ export class ComponentesComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El componente no existe o ya fue eliminado.';
     if (error.status === 409) return 'Ya existe un componente con ese nombre y tipo.';
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar los componentes.'
-      : 'No fue posible crear el componente.';
+    if (action === 'list') return 'No fue posible cargar los componentes.';
+    if (action === 'update') return 'No fue posible actualizar el componente.';
+    return 'No fue posible crear el componente.';
   }
 }

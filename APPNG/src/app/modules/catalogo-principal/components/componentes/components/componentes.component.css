@@ -224,6 +224,12 @@ tbody tr:hover {
 }
 .edit-action {
   color: #718b59;
+  font-size: 14px;
+  line-height: 1;
+}
+.edit-action:hover {
+  text-decoration: none;
+  color: #557b48;
 }
 .delete-action {
   color: #aa7771;
