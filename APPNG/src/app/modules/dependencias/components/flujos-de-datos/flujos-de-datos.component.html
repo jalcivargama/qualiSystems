@@ -44,12 +44,13 @@
           <th>Sensibilidad</th>
           <th>Formato</th>
           <th>Descripción</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="7">
+            <td class="empty-cell" colspan="8">
               <strong>Cargando flujos de datos...</strong>
             </td>
           </tr>
@@ -63,10 +64,21 @@
               <td [title]="labelForSensitivity(row.sensitivity)">{{ labelForSensitivity(row.sensitivity) }}</td>
               <td [title]="row.dataFormat || ''">{{ row.dataFormat || '—' }}</td>
               <td [title]="row.description || ''">{{ row.description || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + (row.dataName || row.dataFlowId)"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="7">
+              <td class="empty-cell" colspan="8">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -76,6 +88,9 @@
                       : 'Crea el primer flujo de datos para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -90,12 +105,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear flujo de datos">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar flujo de datos' : 'Crear flujo de datos'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">data_flow</span>
-          <h2>Nuevo flujo de datos</h2>
-          <p>Asocia el flujo a una dependencia y describe el dato intercambiado.</p>
+          <h2>{{ isEditing() ? 'Editar flujo de datos' : 'Nuevo flujo de datos' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza la dependencia y los datos del flujo.'
+                : 'Asocia el flujo a una dependencia y describe el dato intercambiado.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -189,7 +215,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>

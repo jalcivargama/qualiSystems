@@ -17,4 +17,8 @@ export class DataFlowsService {
   createDataFlow(body: DataFlowRequest): Observable<DataFlow> {
     return this.http.post<DataFlow>(`${this.baseUrl}/catalogos/data-flows`, body);
   }
+
+  updateDataFlow(id: number, body: DataFlowRequest): Observable<DataFlow> {
+    return this.http.put<DataFlow>(`${this.baseUrl}/catalogos/data-flows/${id}`, body);
+  }
 }

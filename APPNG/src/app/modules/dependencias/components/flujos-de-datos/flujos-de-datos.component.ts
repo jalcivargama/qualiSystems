@@ -51,6 +51,8 @@ export class FlujosDeDatosComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingDataFlowId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: DataFlowForm = this.emptyForm();
@@ -115,7 +117,26 @@ export class FlujosDeDatosComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingDataFlowId.set(null);
     this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadDependencies();
+    this.loadComponents();
+  }
+
+  openEdit(row: DataFlowRow): void {
+    this.isEditing.set(true);
+    this.editingDataFlowId.set(this.toId(row.dataFlowId));
+    this.form = {
+      dependencyId: this.toId(row.dependencyId),
+      dataName: row.dataName ?? '',
+      periodicity: row.periodicity ?? '',
+      sensitivity: (row.sensitivity as Sensitivity | null) ?? '',
+      dataFormat: row.dataFormat ?? '',
+      description: row.description ?? '',
+    };
     this.formError.set('');
     this.modalOpen.set(true);
     this.loadDependencies();
@@ -124,6 +145,8 @@ export class FlujosDeDatosComponent implements OnInit {
 
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingDataFlowId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -157,16 +180,47 @@ export class FlujosDeDatosComponent implements OnInit {
       return;
     }
 
-    const body: DataFlowRequest = { dependencyId, dataName };
-    if (periodicity) body.periodicity = periodicity;
-    if (this.form.sensitivity) body.sensitivity = this.form.sensitivity;
-    if (dataFormat) body.dataFormat = dataFormat;
-    if (description) body.description = description;
-
     this.saving.set(true);
     this.formError.set('');
 
-    this.dataFlowsService.createDataFlow(body).subscribe({
+    if (this.isEditing()) {
+      const id = this.editingDataFlowId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar el flujo de datos a actualizar.');
+        return;
+      }
+
+      const updateBody: DataFlowRequest = {
+        dependencyId,
+        dataName,
+        periodicity: periodicity || null,
+        sensitivity: this.form.sensitivity || null,
+        dataFormat: dataFormat || null,
+        description: description || null,
+      };
+
+      this.dataFlowsService.updateDataFlow(id, updateBody).subscribe({
+        next: () => {
+          this.toastService.success('Flujo de datos actualizado correctamente');
+          this.closeModal();
+          this.loadDataFlows();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createBody: DataFlowRequest = { dependencyId, dataName };
+    if (periodicity) createBody.periodicity = periodicity;
+    if (this.form.sensitivity) createBody.sensitivity = this.form.sensitivity;
+    if (dataFormat) createBody.dataFormat = dataFormat;
+    if (description) createBody.description = description;
+
+    this.dataFlowsService.createDataFlow(createBody).subscribe({
       next: () => {
         this.toastService.success('Flujo de datos creado correctamente');
         this.closeModal();
@@ -240,7 +294,10 @@ export class FlujosDeDatosComponent implements OnInit {
     return Number.isFinite(id) ? id : null;
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -248,12 +305,13 @@ export class FlujosDeDatosComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El flujo de datos no existe o ya fue eliminado.';
     if (error.status === 409) {
       return 'Conflicto: la dependencia no existe o hay una restricción en base de datos.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar los flujos de datos.'
-      : 'No fue posible crear el flujo de datos.';
+    if (action === 'list') return 'No fue posible cargar los flujos de datos.';
+    if (action === 'update') return 'No fue posible actualizar el flujo de datos.';
+    return 'No fue posible crear el flujo de datos.';
   }
 }
