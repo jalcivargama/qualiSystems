@@ -6,10 +6,22 @@ import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
 import { CatalogComponent } from '../../../catalogo-principal/components/componentes/models/component.model';
+import { SystemDetailsService } from '../../../catalogo-principal/components/sistemas/system-details.service';
+import { SystemDetail } from '../../../catalogo-principal/components/sistemas/models/system-detail.model';
 import { SystemDeploymentsService } from './system-deployments.service';
-import { Environment, SystemDeployment } from './models/system-deployment.model';
+import {
+  Environment,
+  SystemDeployment,
+  SystemDeploymentRequest,
+} from './models/system-deployment.model';
 
 type DeploymentRow = SystemDeployment & { _rowId: string };
+
+type DeploymentForm = {
+  componentId: number | null;
+  environment: Environment | '';
+  url: string;
+};
 
 @Component({
   selector: 'app-despliegues',
@@ -19,6 +31,7 @@ type DeploymentRow = SystemDeployment & { _rowId: string };
 })
 export class DesplieguesComponent implements OnInit {
   private readonly systemDeploymentsService = inject(SystemDeploymentsService);
+  private readonly systemDetailsService = inject(SystemDetailsService);
   private readonly componentsService = inject(ComponentsService);
   private readonly toastService = inject(ToastService);
 
@@ -37,8 +50,36 @@ export class DesplieguesComponent implements OnInit {
 
   readonly rows = signal<DeploymentRow[]>([]);
   readonly components = signal<CatalogComponent[]>([]);
+  readonly systemDetails = signal<SystemDetail[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  readonly selectedComponentId = signal<number | null>(null);
+  form: DeploymentForm = this.emptyForm();
+
+  readonly availableSystems = computed(() => {
+    return this.systemDetails()
+      .map((detail) => {
+        const componentId = Number(detail.componentId);
+        if (!Number.isFinite(componentId)) return null;
+        return { componentId, name: this.componentName(componentId) };
+      })
+      .filter((item): item is { componentId: number; name: string } => item != null)
+      .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  });
+
+  readonly availableEnvironments = computed(() => {
+    const componentId = this.selectedComponentId();
+    if (componentId == null) return this.environmentOptions;
+    const used = new Set(
+      this.rows()
+        .filter((row) => Number(row.componentId) === componentId)
+        .map((row) => row.environment),
+    );
+    return this.environmentOptions.filter((option) => !used.has(option.value));
+  });
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -57,6 +98,23 @@ export class DesplieguesComponent implements OnInit {
   ngOnInit(): void {
     this.loadDeployments();
     this.loadComponents();
+    this.loadSystemDetails();
+  }
+
+  get canSubmit(): boolean {
+    return this.resolveComponentId() != null && !!this.form.environment;
+  }
+
+  onComponentIdChange(value: number | string | null): void {
+    const componentId = this.toComponentId(value);
+    this.form.componentId = componentId;
+    this.selectedComponentId.set(componentId);
+    if (
+      this.form.environment &&
+      !this.availableEnvironments().some((option) => option.value === this.form.environment)
+    ) {
+      this.form.environment = '';
+    }
   }
 
   componentName(componentId: number | null | undefined): string {
@@ -76,6 +134,58 @@ export class DesplieguesComponent implements OnInit {
     this.searchTerm.set('');
   }
 
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.selectedComponentId.set(null);
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadSystemDetails();
+    this.loadComponents();
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.selectedComponentId.set(null);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const componentId = this.resolveComponentId();
+    const environment = this.form.environment;
+    if (componentId == null || !environment) {
+      this.formError.set('Completa los campos obligatorios.');
+      return;
+    }
+
+    const url = this.form.url.trim();
+    if (url.length > 2000) {
+      this.formError.set('La URL no puede superar 2000 caracteres.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.formError.set('');
+    this.form.componentId = componentId;
+
+    const body: SystemDeploymentRequest = { componentId, environment };
+    if (url) body.url = url;
+
+    this.systemDeploymentsService.createSystemDeployment(body).subscribe({
+      next: () => {
+        this.toastService.success('Despliegue creado correctamente');
+        this.closeModal();
+        this.loadDeployments();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
+  }
+
   private loadDeployments(): void {
     this.loading.set(true);
     this.systemDeploymentsService.getAllSystemDeployments().subscribe({
@@ -86,7 +196,7 @@ export class DesplieguesComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });
   }
@@ -102,6 +212,17 @@ export class DesplieguesComponent implements OnInit {
     });
   }
 
+  private loadSystemDetails(): void {
+    this.systemDetailsService.getAllSystemDetails().subscribe({
+      next: (details) => {
+        this.systemDetails.set(Array.isArray(details) ? details : []);
+      },
+      error: () => {
+        this.systemDetails.set([]);
+      },
+    });
+  }
+
   private toRow(deployment: SystemDeployment): DeploymentRow {
     return {
       ...deployment,
@@ -109,7 +230,25 @@ export class DesplieguesComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): DeploymentForm {
+    return {
+      componentId: null,
+      environment: '',
+      url: '',
+    };
+  }
+
+  private resolveComponentId(): number | null {
+    return this.toComponentId(this.form.componentId);
+  }
+
+  private toComponentId(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const id = Number(value);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -117,6 +256,11 @@ export class DesplieguesComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar los despliegues.';
+    if (error.status === 409) {
+      return 'Conflicto: ese sistema ya tiene despliegue en el ambiente, o el system-detail no existe.';
+    }
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    if (action === 'list') return 'No fue posible cargar los despliegues.';
+    return 'No fue posible crear el despliegue.';
   }
 }

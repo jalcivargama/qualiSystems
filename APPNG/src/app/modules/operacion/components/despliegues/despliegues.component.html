@@ -8,6 +8,7 @@
     <h1>Despliegues</h1>
     <p>URLs de los sistemas según su ambiente.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -68,7 +69,7 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'Aún no hay despliegues registrados.'
+                      : 'Crea el primer despliegue para comenzar.'
                   }}
                 </small>
               </td>
@@ -82,3 +83,85 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear despliegue">
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">system_deployment</span>
+          <h2>Nuevo despliegue</h2>
+          <p>Selecciona un sistema con detalle y define su ambiente.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-componentId">Sistema <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un sistema</option>
+              <option
+                *ngFor="let system of availableSystems()"
+                [ngValue]="system.componentId"
+              >
+                {{ system.name }}
+              </option>
+            </select>
+            <small class="field-hint">Solo sistemas con detalle de sistema registrado.</small>
+            @if (availableSystems().length === 0) {
+              <small class="field-hint">No hay system-details disponibles para asociar.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-environment">Ambiente <i>*</i></label>
+            <select id="field-environment" name="environment" [(ngModel)]="form.environment" required>
+              <option value="">Selecciona un ambiente</option>
+              @for (option of availableEnvironments(); track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            @if (selectedComponentId() != null && availableEnvironments().length === 0) {
+              <small class="field-hint">Este sistema ya tiene despliegue en todos los ambientes.</small>
+            }
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-url">URL</label>
+            <input
+              id="field-url"
+              name="url"
+              type="url"
+              [(ngModel)]="form.url"
+              maxlength="2000"
+              placeholder="https://inventario.ejemplo.com"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}
