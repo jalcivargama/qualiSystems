@@ -11,6 +11,7 @@ import {
   Criticality,
   SystemDetail,
   SystemDetailRequest,
+  SystemDetailUpdateRequest,
   SystemStatus,
 } from './models/system-detail.model';
 
@@ -64,15 +65,18 @@ export class SistemasComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: SystemForm = this.emptyForm();
 
   readonly availableSystemComponents = computed(() => {
+    const editingId = this.editingComponentId();
     const usedIds = new Set(
       this.rows()
         .map((row) => Number(row.componentId))
-        .filter((id) => Number.isFinite(id)),
+        .filter((id) => Number.isFinite(id) && id !== editingId),
     );
     return this.components().filter((component) => {
       const type = String(component.componentType ?? '').trim().toUpperCase();
@@ -105,7 +109,12 @@ export class SistemasComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return this.form.componentId != null && !!this.form.systemStatus;
+    const componentId = this.resolveComponentId() ?? this.editingComponentId();
+    return !!this.form.systemStatus && componentId != null;
+  }
+
+  onComponentIdChange(value: number | string | null): void {
+    this.form.componentId = this.toComponentId(value);
   }
 
   labelForCriticality(value: string | null | undefined): string {
@@ -131,14 +140,35 @@ export class SistemasComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.form = this.emptyForm();
     this.formError.set('');
     this.modalOpen.set(true);
     this.loadSystemComponents();
   }
 
+  openEdit(row: SystemRow): void {
+    const componentId = this.toComponentId(row.componentId);
+    this.isEditing.set(true);
+    this.editingComponentId.set(componentId);
+    this.form = {
+      componentId,
+      businessObjective: row.businessObjective ?? '',
+      ownerArea: row.ownerArea ?? '',
+      criticality: (row.criticality as Criticality | null) ?? '',
+      systemStatus: row.systemStatus,
+      goLiveDate: row.goLiveDate ?? '',
+      endOfLifeDate: row.endOfLifeDate ?? '',
+    };
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -146,8 +176,7 @@ export class SistemasComponent implements OnInit {
   save(): void {
     if (this.saving() || !this.canSubmit) return;
 
-    const componentId = this.form.componentId;
-    if (componentId == null || !this.form.systemStatus) {
+    if (!this.form.systemStatus) {
       this.formError.set('Completa los campos obligatorios.');
       return;
     }
@@ -165,22 +194,55 @@ export class SistemasComponent implements OnInit {
       return;
     }
 
-    const body: SystemDetailRequest = {
-      componentId,
-      systemStatus: this.form.systemStatus,
-    };
-
     const businessObjective = this.form.businessObjective.trim();
-    if (businessObjective) body.businessObjective = businessObjective;
-    if (ownerArea) body.ownerArea = ownerArea;
-    if (this.form.criticality) body.criticality = this.form.criticality;
-    body.goLiveDate = goLiveDate || null;
-    body.endOfLifeDate = endOfLifeDate || null;
 
     this.saving.set(true);
     this.formError.set('');
 
-    this.systemDetailsService.createSystemDetail(body).subscribe({
+    const componentId = this.resolveComponentId() ?? this.editingComponentId();
+    if (componentId == null) {
+      this.saving.set(false);
+      this.formError.set('Selecciona un componente SISTEMA.');
+      return;
+    }
+    this.form.componentId = componentId;
+
+    if (this.isEditing()) {
+      const updateBody: SystemDetailUpdateRequest = {
+        componentId,
+        systemStatus: this.form.systemStatus,
+        businessObjective: businessObjective || null,
+        ownerArea: ownerArea || null,
+        criticality: this.form.criticality || null,
+        goLiveDate: goLiveDate || null,
+        endOfLifeDate: endOfLifeDate || null,
+      };
+
+      this.systemDetailsService.updateSystemDetail(componentId, updateBody).subscribe({
+        next: () => {
+          this.toastService.success('Detalle de sistema actualizado correctamente');
+          this.closeModal();
+          this.loadSystemDetails();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createBody: SystemDetailRequest = {
+      componentId,
+      systemStatus: this.form.systemStatus,
+      goLiveDate: goLiveDate || null,
+      endOfLifeDate: endOfLifeDate || null,
+    };
+    if (businessObjective) createBody.businessObjective = businessObjective;
+    if (ownerArea) createBody.ownerArea = ownerArea;
+    if (this.form.criticality) createBody.criticality = this.form.criticality;
+
+    this.systemDetailsService.createSystemDetail(createBody).subscribe({
       next: () => {
         this.toastService.success('Detalle de sistema creado correctamente');
         this.closeModal();
@@ -238,7 +300,20 @@ export class SistemasComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveComponentId(): number | null {
+    return this.toComponentId(this.form.componentId);
+  }
+
+  private toComponentId(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const id = Number(value);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -246,12 +321,15 @@ export class SistemasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El detalle de sistema no existe o ya fue eliminado.';
     if (error.status === 409) {
-      return 'Conflicto: el componente ya tiene detalle o no es de tipo SISTEMA.';
+      return action === 'update'
+        ? 'No se puede actualizar por restricciones relacionadas.'
+        : 'Conflicto: el componente ya tiene detalle o no es de tipo SISTEMA.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar los detalles de sistema.'
-      : 'No fue posible crear el detalle de sistema.';
+    if (action === 'list') return 'No fue posible cargar los detalles de sistema.';
+    if (action === 'update') return 'No fue posible actualizar el detalle de sistema.';
+    return 'No fue posible crear el detalle de sistema.';
   }
 }

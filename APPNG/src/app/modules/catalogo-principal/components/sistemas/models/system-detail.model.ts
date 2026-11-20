@@ -16,3 +16,6 @@ export interface SystemDetail {
 
 /** Body para CREATE (sin componentType) */
 export type SystemDetailRequest = Omit<SystemDetail, 'componentType'>;
+
+/** Body para UPDATE (sin componentType) */
+export type SystemDetailUpdateRequest = Omit<SystemDetail, 'componentType'>;

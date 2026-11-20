@@ -44,12 +44,13 @@
           <th>Estado</th>
           <th>Puesta en producción</th>
           <th>Fin de vida</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="7">
+            <td class="empty-cell" colspan="8">
               <strong>Cargando sistemas...</strong>
             </td>
           </tr>
@@ -63,13 +64,27 @@
               <td [title]="labelForSystemStatus(row.systemStatus)">{{ labelForSystemStatus(row.systemStatus) }}</td>
               <td [title]="row.goLiveDate || ''">{{ row.goLiveDate || '—' }}</td>
               <td [title]="row.endOfLifeDate || ''">{{ row.endOfLifeDate || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + componentName(row.componentId)"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="7">
+              <td class="empty-cell" colspan="8">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea el primer detalle de sistema para comenzar.' }}</small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -84,12 +99,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear detalle de sistema">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar detalle de sistema' : 'Crear detalle de sistema'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">system_detail</span>
-          <h2>Nuevo detalle de sistema</h2>
-          <p>Selecciona un componente SISTEMA y completa sus datos.</p>
+          <h2>{{ isEditing() ? 'Editar detalle de sistema' : 'Nuevo detalle de sistema' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos del sistema seleccionado.'
+                : 'Selecciona un componente SISTEMA y completa sus datos.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -98,11 +124,17 @@
         <div class="form-grid">
           <div class="form-field full-width">
             <label for="field-componentId">Componente SISTEMA <i>*</i></label>
-            <select id="field-componentId" name="componentId" [(ngModel)]="form.componentId" required>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
               <option [ngValue]="null">Selecciona un componente</option>
               <option
                 *ngFor="let component of availableSystemComponents()"
-                [ngValue]="component.componentId"
+                [ngValue]="+component.componentId!"
               >
                 {{ component.name }}
               </option>
@@ -181,7 +213,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>
