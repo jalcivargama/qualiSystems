@@ -16,3 +16,6 @@ export interface Technology {
   category: TechnologyCategory;
   name: string;
 }
+
+/** Body para CREATE (sin technologyId) */
+export type TechnologyRequest = Omit<Technology, 'technologyId'>;

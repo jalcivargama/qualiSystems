@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { Technology } from './models/technology.model';
+import { Technology, TechnologyRequest } from './models/technology.model';
 
 @Injectable({ providedIn: 'root' })
 export class TechnologiesService {
@@ -12,5 +12,9 @@ export class TechnologiesService {
 
   getAllTechnologies(): Observable<Technology[]> {
     return this.http.get<Technology[]>(`${this.baseUrl}/catalogos/technologies`);
+  }
+
+  createTechnology(body: TechnologyRequest): Observable<Technology> {
+    return this.http.post<Technology>(`${this.baseUrl}/catalogos/technologies`, body);
   }
 }

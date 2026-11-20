@@ -5,9 +5,18 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
 import { TechnologiesService } from './technologies.service';
-import { Technology, TechnologyCategory } from './models/technology.model';
+import {
+  Technology,
+  TechnologyCategory,
+  TechnologyRequest,
+} from './models/technology.model';
 
 type TechnologyRow = Technology & { _rowId: string };
+
+type TechnologyForm = {
+  category: TechnologyCategory | '';
+  name: string;
+};
 
 @Component({
   selector: 'app-tecnologias',
@@ -39,6 +48,10 @@ export class TecnologiasComponent implements OnInit {
   readonly rows = signal<TechnologyRow[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  form: TechnologyForm = this.emptyForm();
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -55,6 +68,10 @@ export class TecnologiasComponent implements OnInit {
     this.loadTechnologies();
   }
 
+  get canSubmit(): boolean {
+    return !!this.form.category && this.form.name.trim().length > 0;
+  }
+
   labelForCategory(value: string | null | undefined): string {
     if (!value) return '—';
     return this.categoryLabels[value as TechnologyCategory] ?? value;
@@ -62,6 +79,52 @@ export class TecnologiasComponent implements OnInit {
 
   clearSearch(): void {
     this.searchTerm.set('');
+  }
+
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const category = this.form.category;
+    const name = this.form.name.trim();
+
+    if (!category || !name) {
+      this.formError.set('Completa los campos obligatorios.');
+      return;
+    }
+
+    if (name.length > 200) {
+      this.formError.set('El nombre no puede superar 200 caracteres.');
+      return;
+    }
+
+    const body: TechnologyRequest = { category, name };
+
+    this.saving.set(true);
+    this.formError.set('');
+
+    this.technologiesService.createTechnology(body).subscribe({
+      next: () => {
+        this.toastService.success('Tecnología creada correctamente');
+        this.closeModal();
+        this.loadTechnologies();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
   }
 
   private loadTechnologies(): void {
@@ -74,7 +137,7 @@ export class TecnologiasComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });
   }
@@ -86,7 +149,14 @@ export class TecnologiasComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): TechnologyForm {
+    return {
+      category: '',
+      name: '',
+    };
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -94,6 +164,11 @@ export class TecnologiasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar las tecnologías.';
+    if (error.status === 409) {
+      return 'Conflicto: ya existe una tecnología con esa categoría y nombre.';
+    }
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    if (action === 'list') return 'No fue posible cargar las tecnologías.';
+    return 'No fue posible crear la tecnología.';
   }
 }
