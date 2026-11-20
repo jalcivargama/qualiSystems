@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { CatalogTableComponent } from '../../../../shared/ui/catalog-table/catalog-table.component';
+import { CatalogTableComponent } from '../../../../../shared/ui/catalog-table/catalog-table.component';
 
 @Component({
   selector: 'app-apis',
