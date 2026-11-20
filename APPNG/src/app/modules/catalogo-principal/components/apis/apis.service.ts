@@ -25,4 +25,8 @@ export class ApisService {
   updateApiDetail(id: number, body: ApiDetailUpdateRequest): Observable<ApiDetail> {
     return this.http.put<ApiDetail>(`${this.baseUrl}/catalogos/api-details/${id}`, body);
   }
+
+  deleteApiDetail(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/api-details/${id}`);
+  }
 }

@@ -45,6 +45,7 @@ export class ApisComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: ApiForm = this.emptyForm();
 
@@ -136,10 +137,41 @@ export class ApisComponent implements OnInit {
     this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingComponentId() ?? this.resolveComponentId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el detalle de API a eliminar.');
+      return;
+    }
+
+    const label = this.componentName(id);
+    if (!window.confirm(`¿Eliminar el detalle de API "${label !== '—' ? label : id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.apisService.deleteApiDetail(id).subscribe({
+      next: () => {
+        this.toastService.success('Detalle de API eliminado correctamente');
+        this.closeModal();
+        this.loadApiDetails();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const componentId = this.resolveComponentId() ?? this.editingComponentId();
     if (componentId == null) {
@@ -274,7 +306,7 @@ export class ApisComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -285,6 +317,9 @@ export class ApisComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El detalle de API no existe o ya fue eliminado.';
     if (error.status === 409) {
+      if (action === 'delete') {
+        return 'No se puede eliminar: la API tiene registros relacionados.';
+      }
       return action === 'update'
         ? 'No se puede actualizar por restricciones relacionadas.'
         : 'Conflicto: el componente ya tiene detalle o no es de tipo API.';
@@ -292,6 +327,7 @@ export class ApisComponent implements OnInit {
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los detalles de API.';
     if (action === 'update') return 'No fue posible actualizar el detalle de API.';
+    if (action === 'delete') return 'No fue posible eliminar el detalle de API.';
     return 'No fue posible crear el detalle de API.';
   }
 }
