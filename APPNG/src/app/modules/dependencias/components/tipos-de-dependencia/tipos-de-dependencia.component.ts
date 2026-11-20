@@ -31,6 +31,7 @@ export class TiposDeDependenciaComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingDependencyTypeId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: DependencyTypeForm = this.emptyForm();
 
@@ -82,10 +83,40 @@ export class TiposDeDependenciaComponent implements OnInit {
     this.editingDependencyTypeId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingDependencyTypeId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el tipo de dependencia a eliminar.');
+      return;
+    }
+
+    if (!window.confirm(`¿Eliminar el tipo de dependencia "${this.form.typeName.trim() || id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.dependencyTypesService.deleteDependencyType(id).subscribe({
+      next: () => {
+        this.toastService.success('Tipo de dependencia eliminado correctamente');
+        this.closeModal();
+        this.loadDependencyTypes();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const typeCode = this.form.typeCode.trim();
     const typeName = this.form.typeName.trim();
@@ -176,7 +207,7 @@ export class TiposDeDependenciaComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -187,11 +218,14 @@ export class TiposDeDependenciaComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El tipo de dependencia no existe o ya fue eliminado.';
     if (error.status === 409) {
-      return 'Conflicto: ya existe un tipo con ese código o nombre.';
+      return action === 'delete'
+        ? 'No se puede eliminar: el tipo tiene dependencias asociadas.'
+        : 'Conflicto: ya existe un tipo con ese código o nombre.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los tipos de dependencia.';
     if (action === 'update') return 'No fue posible actualizar el tipo de dependencia.';
+    if (action === 'delete') return 'No fue posible eliminar el tipo de dependencia.';
     return 'No fue posible crear el tipo de dependencia.';
   }
 }
