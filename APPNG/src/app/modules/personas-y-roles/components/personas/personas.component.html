@@ -8,6 +8,7 @@
     <h1>Personas</h1>
     <p>Contactos internos y proveedores responsables de los sistemas.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -76,3 +77,84 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear persona">
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">person</span>
+          <h2>Nueva persona</h2>
+          <p>Completa los campos para registrarla en el catálogo.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-fullName">Nombre completo <i>*</i></label>
+            <input
+              id="field-fullName"
+              name="fullName"
+              type="text"
+              [(ngModel)]="form.fullName"
+              required
+              maxlength="200"
+              placeholder="Ingresa nombre completo"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-isActive">Activo <i>*</i></label>
+            <select id="field-isActive" name="isActive" [(ngModel)]="form.isActive" required>
+              @for (flag of activeFlagOptions; track flag.value) {
+                <option [value]="flag.value">{{ flag.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-email">Correo <i>*</i></label>
+            <input
+              id="field-email"
+              name="email"
+              type="email"
+              [(ngModel)]="form.email"
+              required
+              maxlength="320"
+              placeholder="Ingresa correo"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-organization">Organización</label>
+            <input
+              id="field-organization"
+              name="organization"
+              type="text"
+              [(ngModel)]="form.organization"
+              maxlength="200"
+              placeholder="Ingresa organización"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

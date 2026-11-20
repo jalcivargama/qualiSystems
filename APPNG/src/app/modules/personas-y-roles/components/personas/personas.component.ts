@@ -5,9 +5,16 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
 import { PeopleService } from './people.service';
-import { ActiveFlag, Person } from './models/person.model';
+import { ActiveFlag, Person, PersonRequest } from './models/person.model';
 
 type PersonRow = Person & { _rowId: string };
+
+type PersonForm = {
+  fullName: string;
+  email: string;
+  organization: string;
+  isActive: ActiveFlag;
+};
 
 @Component({
   selector: 'app-personas',
@@ -19,14 +26,22 @@ export class PersonasComponent implements OnInit {
   private readonly peopleService = inject(PeopleService);
   private readonly toastService = inject(ToastService);
 
-  private readonly activeFlagLabels: Record<ActiveFlag, string> = {
-    Y: 'SÍ',
-    N: 'NO',
-  };
+  readonly activeFlagOptions: { value: ActiveFlag; label: string }[] = [
+    { value: 'Y', label: 'SÍ' },
+    { value: 'N', label: 'NO' },
+  ];
+
+  private readonly activeFlagLabels = Object.fromEntries(
+    this.activeFlagOptions.map((option) => [option.value, option.label]),
+  ) as Record<ActiveFlag, string>;
 
   readonly rows = signal<PersonRow[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  form: PersonForm = this.emptyForm();
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -55,6 +70,72 @@ export class PersonasComponent implements OnInit {
     this.searchTerm.set('');
   }
 
+  get canSubmit(): boolean {
+    return this.form.fullName.trim().length > 0 && this.form.email.trim().length > 0;
+  }
+
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const fullName = this.form.fullName.trim();
+    const email = this.form.email.trim();
+
+    if (!fullName || !email || !this.form.isActive) {
+      this.formError.set('Completa los campos obligatorios.');
+      return;
+    }
+
+    if (fullName.length > 200) {
+      this.formError.set('El nombre no puede superar 200 caracteres.');
+      return;
+    }
+
+    if (email.length > 320) {
+      this.formError.set('El correo no puede superar 320 caracteres.');
+      return;
+    }
+
+    const organization = this.form.organization.trim();
+    if (organization.length > 200) {
+      this.formError.set('La organización no puede superar 200 caracteres.');
+      return;
+    }
+
+    const body: PersonRequest = {
+      fullName,
+      email,
+      isActive: this.form.isActive,
+    };
+    if (organization) body.organization = organization;
+
+    this.saving.set(true);
+    this.formError.set('');
+
+    this.peopleService.createPerson(body).subscribe({
+      next: () => {
+        this.toastService.success('Persona creada correctamente');
+        this.closeModal();
+        this.loadPeople();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
+  }
+
   private loadPeople(): void {
     this.loading.set(true);
     this.peopleService.getPeople().subscribe({
@@ -65,7 +146,7 @@ export class PersonasComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });
   }
@@ -77,7 +158,16 @@ export class PersonasComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): PersonForm {
+    return {
+      fullName: '',
+      email: '',
+      organization: '',
+      isActive: 'Y',
+    };
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -85,6 +175,10 @@ export class PersonasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar las personas.';
+    if (error.status === 409) return 'Ya existe una persona con ese correo.';
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    return action === 'list'
+      ? 'No fue posible cargar las personas.'
+      : 'No fue posible crear la persona.';
   }
 }
