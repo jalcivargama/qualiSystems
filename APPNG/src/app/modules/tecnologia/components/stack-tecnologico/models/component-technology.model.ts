@@ -7,3 +7,9 @@ export interface ComponentTechnology {
   version?: string | null;
   isPrimary: ActiveFlag;
 }
+
+/** Body para UPDATE (clave va en la URL) */
+export type ComponentTechnologyUpdateRequest = Omit<
+  ComponentTechnology,
+  'componentId' | 'technologyId'
+>;

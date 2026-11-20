@@ -12,7 +12,11 @@ import {
 import { TechnologiesService } from '../tecnologias/technologies.service';
 import { Technology, TechnologyCategory } from '../tecnologias/models/technology.model';
 import { ComponentTechnologiesService } from './component-technologies.service';
-import { ActiveFlag, ComponentTechnology } from './models/component-technology.model';
+import {
+  ActiveFlag,
+  ComponentTechnology,
+  ComponentTechnologyUpdateRequest,
+} from './models/component-technology.model';
 
 type ComponentTechnologyRow = ComponentTechnology & { _rowId: string };
 
@@ -72,6 +76,7 @@ export class StackTecnologicoComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
   readonly saving = signal(false);
   readonly formError = signal('');
   readonly selectedComponentId = signal<number | null>(null);
@@ -93,10 +98,12 @@ export class StackTecnologicoComponent implements OnInit {
 
   readonly availableTechnologies = computed(() => {
     const componentId = this.selectedComponentId();
+    const editingTechnologyId = this.isEditing() ? this.form.technologyId : null;
     const usedTechnologyIds = new Set(
       this.rows()
         .filter((row) => Number(row.componentId) === Number(componentId))
-        .map((row) => Number(row.technologyId)),
+        .map((row) => Number(row.technologyId))
+        .filter((id) => id !== Number(editingTechnologyId)),
     );
     return this.technologies().filter((technology) => {
       const id = Number(technology.technologyId);
@@ -119,12 +126,14 @@ export class StackTecnologicoComponent implements OnInit {
   }
 
   onComponentIdChange(value: number | string | null): void {
+    if (this.isEditing()) return;
     this.form.componentId = this.toId(value);
     this.selectedComponentId.set(this.form.componentId);
     this.form.technologyId = null;
   }
 
   onTechnologyIdChange(value: number | string | null): void {
+    if (this.isEditing()) return;
     this.form.technologyId = this.toId(value);
   }
 
@@ -169,6 +178,7 @@ export class StackTecnologicoComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
     this.form = this.emptyForm();
     this.selectedComponentId.set(null);
     this.formError.set('');
@@ -177,8 +187,26 @@ export class StackTecnologicoComponent implements OnInit {
     this.loadTechnologies();
   }
 
+  openEdit(row: ComponentTechnologyRow): void {
+    const componentId = this.toId(row.componentId);
+    const technologyId = this.toId(row.technologyId);
+    this.isEditing.set(true);
+    this.form = {
+      componentId,
+      technologyId,
+      version: row.version ?? '',
+      isPrimary: row.isPrimary ?? 'N',
+    };
+    this.selectedComponentId.set(componentId);
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadComponents();
+    this.loadTechnologies();
+  }
+
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
     this.selectedComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
@@ -201,17 +229,39 @@ export class StackTecnologicoComponent implements OnInit {
       return;
     }
 
-    const body: ComponentTechnology = {
+    this.saving.set(true);
+    this.formError.set('');
+
+    if (this.isEditing()) {
+      const updateBody: ComponentTechnologyUpdateRequest = {
+        isPrimary: this.form.isPrimary,
+        version: version || null,
+      };
+
+      this.componentTechnologiesService
+        .updateComponentTechnology(componentId, technologyId, updateBody)
+        .subscribe({
+          next: () => {
+            this.toastService.success('Tecnología de componente actualizada correctamente');
+            this.closeModal();
+            this.loadComponentTechnologies();
+          },
+          error: (error: HttpErrorResponse) => {
+            this.saving.set(false);
+            this.toastService.error(this.resolveErrorMessage(error, 'update'));
+          },
+        });
+      return;
+    }
+
+    const createBody: ComponentTechnology = {
       componentId,
       technologyId,
       isPrimary: this.form.isPrimary,
     };
-    if (version) body.version = version;
+    if (version) createBody.version = version;
 
-    this.saving.set(true);
-    this.formError.set('');
-
-    this.componentTechnologiesService.createComponentTechnology(body).subscribe({
+    this.componentTechnologiesService.createComponentTechnology(createBody).subscribe({
       next: () => {
         this.toastService.success('Tecnología de componente creada correctamente');
         this.closeModal();
@@ -283,7 +333,10 @@ export class StackTecnologicoComponent implements OnInit {
     return Number.isFinite(id) ? id : null;
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -291,12 +344,13 @@ export class StackTecnologicoComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'La relación componente-tecnología no existe o ya fue eliminada.';
     if (error.status === 409) {
       return 'Conflicto: la relación ya existe o el componente/tecnología no es válido.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar el stack tecnológico.'
-      : 'No fue posible crear la tecnología de componente.';
+    if (action === 'list') return 'No fue posible cargar el stack tecnológico.';
+    if (action === 'update') return 'No fue posible actualizar la tecnología de componente.';
+    return 'No fue posible crear la tecnología de componente.';
   }
 }

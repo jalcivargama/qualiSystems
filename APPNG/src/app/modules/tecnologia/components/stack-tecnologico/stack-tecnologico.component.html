@@ -41,12 +41,13 @@
           <th>Tecnología</th>
           <th>Versión</th>
           <th>Principal</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="4">
+            <td class="empty-cell" colspan="5">
               <strong>Cargando stack tecnológico...</strong>
             </td>
           </tr>
@@ -57,10 +58,23 @@
               <td [title]="technologyName(row.technologyId)">{{ technologyName(row.technologyId) }}</td>
               <td [title]="row.version || ''">{{ row.version || '—' }}</td>
               <td [title]="labelForPrimary(row.isPrimary)">{{ labelForPrimary(row.isPrimary) }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="
+                    'Editar ' + componentName(row.componentId) + ' / ' + technologyName(row.technologyId)
+                  "
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="4">
+              <td class="empty-cell" colspan="5">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -88,13 +102,19 @@
       class="record-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Crear tecnología de componente"
+      [attr.aria-label]="isEditing() ? 'Editar tecnología de componente' : 'Crear tecnología de componente'"
     >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">component_technology</span>
-          <h2>Nueva tecnología de componente</h2>
-          <p>Asocia una tecnología a un componente y define su versión.</p>
+          <h2>{{ isEditing() ? 'Editar tecnología de componente' : 'Nueva tecnología de componente' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza la versión y si es la tecnología principal. La clave no se puede cambiar.'
+                : 'Asocia una tecnología a un componente y define su versión.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -109,6 +129,7 @@
               [ngModel]="form.componentId"
               (ngModelChange)="onComponentIdChange($event)"
               required
+              [disabled]="isEditing()"
             >
               <option [ngValue]="null">Selecciona un componente</option>
               @for (component of components(); track component.componentId) {
@@ -125,7 +146,7 @@
               [ngModel]="form.technologyId"
               (ngModelChange)="onTechnologyIdChange($event)"
               required
-              [disabled]="form.componentId == null"
+              [disabled]="isEditing() || form.componentId == null"
             >
               <option [ngValue]="null">Selecciona una tecnología</option>
               @for (technology of availableTechnologies(); track technology.technologyId) {
@@ -134,7 +155,9 @@
                 </option>
               }
             </select>
-            <small class="field-hint">Solo tecnologías aún no asociadas a ese componente.</small>
+            @if (!isEditing()) {
+              <small class="field-hint">Solo tecnologías aún no asociadas a ese componente.</small>
+            }
           </div>
 
           <div class="form-field">
@@ -169,7 +192,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>

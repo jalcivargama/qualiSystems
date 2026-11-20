@@ -2,7 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { ComponentTechnology } from './models/component-technology.model';
+import {
+  ComponentTechnology,
+  ComponentTechnologyUpdateRequest,
+} from './models/component-technology.model';
 
 @Injectable({ providedIn: 'root' })
 export class ComponentTechnologiesService {
@@ -17,6 +20,17 @@ export class ComponentTechnologiesService {
   createComponentTechnology(body: ComponentTechnology): Observable<ComponentTechnology> {
     return this.http.post<ComponentTechnology>(
       `${this.baseUrl}/catalogos/component-technologies`,
+      body,
+    );
+  }
+
+  updateComponentTechnology(
+    componentId: number,
+    technologyId: number,
+    body: ComponentTechnologyUpdateRequest,
+  ): Observable<ComponentTechnology> {
+    return this.http.put<ComponentTechnology>(
+      `${this.baseUrl}/catalogos/component-technologies/${componentId}/${technologyId}`,
       body,
     );
   }
