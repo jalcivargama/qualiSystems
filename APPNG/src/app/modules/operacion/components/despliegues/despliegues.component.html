@@ -1,2 +1,84 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/system_deployment">Catálogos</a><span>/</span>
+      <strong>Despliegues</strong>
+    </div>
+    <h1>Despliegues</h1>
+    <p>URLs de los sistemas según su ambiente.</p>
+  </div>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Despliegues</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sistema</th>
+          <th>Ambiente</th>
+          <th>URL</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="4">
+              <strong>Cargando despliegues...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="row.deploymentId">{{ row.deploymentId || '—' }}</td>
+              <td [title]="componentName(row.componentId)">{{ componentName(row.componentId) }}</td>
+              <td [title]="labelForEnvironment(row.environment)">
+                {{ labelForEnvironment(row.environment) }}
+              </td>
+              <td [title]="row.url || ''">{{ row.url || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="4">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Aún no hay despliegues registrados.'
+                  }}
+                </small>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
