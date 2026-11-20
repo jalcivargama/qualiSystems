@@ -1,2 +1,90 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/dependency">Catálogos</a><span>/</span>
+      <strong>Dependencias</strong>
+    </div>
+    <h1>Dependencias</h1>
+    <p>Relaciones dirigidas entre el componente origen y destino.</p>
+  </div>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Dependencias</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Origen</th>
+          <th>Destino</th>
+          <th>Tipo</th>
+          <th>Alcance</th>
+          <th>Criticidad</th>
+          <th>Descripción</th>
+          <th>Creado el</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="8">
+              <strong>Cargando dependencias...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="row.dependencyId">{{ row.dependencyId || '—' }}</td>
+              <td [title]="row.originComponentId">{{ row.originComponentId || '—' }}</td>
+              <td [title]="row.targetComponentId">{{ row.targetComponentId || '—' }}</td>
+              <td [title]="row.dependencyTypeId">{{ row.dependencyTypeId || '—' }}</td>
+              <td [title]="labelForScope(row.dependencyScope)">{{ labelForScope(row.dependencyScope) }}</td>
+              <td [title]="labelForCriticality(row.criticality)">{{ labelForCriticality(row.criticality) }}</td>
+              <td [title]="row.description || ''">{{ row.description || '—' }}</td>
+              <td [title]="row.createdAt || ''">{{ row.createdAt || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="8">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'No hay dependencias registradas todavía.'
+                  }}
+                </small>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
