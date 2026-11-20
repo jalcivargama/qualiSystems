@@ -31,4 +31,8 @@ export class SystemDeploymentsService {
       body,
     );
   }
+
+  deleteSystemDeployment(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/system-deployments/${id}`);
+  }
 }

@@ -84,9 +84,6 @@
                       : 'Crea el primer despliegue para comenzar.'
                   }}
                 </small>
-                @if (!searchTerm()) {
-                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
-                }
               </td>
             </tr>
           }
@@ -177,12 +174,27 @@
           <div class="error-banner" role="alert">{{ formError() }}</div>
         }
 
-        <div class="modal-actions">
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
           <div class="modal-actions-right">
-            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
               Cancelar
             </button>
-            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting() || !canSubmit">
               @if (saving()) {
                 {{ isEditing() ? 'Guardando...' : 'Creando...' }}
               } @else {

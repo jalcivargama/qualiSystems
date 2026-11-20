@@ -60,6 +60,7 @@ export class DesplieguesComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingDeploymentId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   readonly selectedComponentId = signal<number | null>(null);
   form: DeploymentForm = this.emptyForm();
@@ -189,10 +190,47 @@ export class DesplieguesComponent implements OnInit {
     this.selectedComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingDeploymentId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el despliegue a eliminar.');
+      return;
+    }
+
+    const system = this.componentName(this.form.componentId);
+    const environment = this.labelForEnvironment(this.form.environment);
+    const label =
+      system !== '—' || environment !== '—'
+        ? `${system !== '—' ? system : id} / ${environment !== '—' ? environment : '—'}`
+        : String(id);
+
+    if (!window.confirm(`¿Eliminar el despliegue "${label}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.systemDeploymentsService.deleteSystemDeployment(id).subscribe({
+      next: () => {
+        this.toastService.success('Despliegue eliminado correctamente');
+        this.closeModal();
+        this.loadDeployments();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const componentId = this.resolveComponentId() ?? this.selectedComponentId();
     const environment = this.form.environment;
@@ -319,7 +357,7 @@ export class DesplieguesComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -330,11 +368,14 @@ export class DesplieguesComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El despliegue no existe o ya fue eliminado.';
     if (error.status === 409) {
-      return 'Conflicto: ese sistema ya tiene despliegue en el ambiente, o el system-detail no existe.';
+      return action === 'delete'
+        ? 'No se puede eliminar: el despliegue tiene registros relacionados.'
+        : 'Conflicto: ese sistema ya tiene despliegue en el ambiente, o el system-detail no existe.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los despliegues.';
     if (action === 'update') return 'No fue posible actualizar el despliegue.';
+    if (action === 'delete') return 'No fue posible eliminar el despliegue.';
     return 'No fue posible crear el despliegue.';
   }
 }
