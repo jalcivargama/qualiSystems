@@ -2,7 +2,7 @@ export type DependencyScope = 'INTERNAL' | 'EXTERNAL';
 
 export type Criticality = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-/** Entidad que regresa la API (GET /catalogos/dependencies) */
+/** Entidad que regresa la API */
 export interface Dependency {
   dependencyId?: number;
   originComponentId: number;
@@ -13,3 +13,6 @@ export interface Dependency {
   description?: string | null;
   createdAt?: string;
 }
+
+/** Body para CREATE (sin campos de solo lectura) */
+export type DependencyRequest = Omit<Dependency, 'dependencyId' | 'createdAt'>;

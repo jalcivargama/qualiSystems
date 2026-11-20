@@ -8,6 +8,7 @@
     <h1>Dependencias</h1>
     <p>Relaciones dirigidas entre el componente origen y destino.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -57,9 +58,9 @@
           @for (row of filteredRows(); track row._rowId) {
             <tr>
               <td [title]="row.dependencyId">{{ row.dependencyId || '—' }}</td>
-              <td [title]="row.originComponentId">{{ row.originComponentId || '—' }}</td>
-              <td [title]="row.targetComponentId">{{ row.targetComponentId || '—' }}</td>
-              <td [title]="row.dependencyTypeId">{{ row.dependencyTypeId || '—' }}</td>
+              <td [title]="componentName(row.originComponentId)">{{ componentName(row.originComponentId) }}</td>
+              <td [title]="componentName(row.targetComponentId)">{{ componentName(row.targetComponentId) }}</td>
+              <td [title]="dependencyTypeName(row.dependencyTypeId)">{{ dependencyTypeName(row.dependencyTypeId) }}</td>
               <td [title]="labelForScope(row.dependencyScope)">{{ labelForScope(row.dependencyScope) }}</td>
               <td [title]="labelForCriticality(row.criticality)">{{ labelForCriticality(row.criticality) }}</td>
               <td [title]="row.description || ''">{{ row.description || '—' }}</td>
@@ -74,7 +75,7 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'No hay dependencias registradas todavía.'
+                      : 'Crea la primera dependencia para comenzar.'
                   }}
                 </small>
               </td>
@@ -88,3 +89,121 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear dependencia">
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">dependency</span>
+          <h2>Nueva dependencia</h2>
+          <p>Define el origen, destino, tipo y alcance de la relación.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-originComponentId">Componente origen <i>*</i></label>
+            <select
+              id="field-originComponentId"
+              name="originComponentId"
+              [ngModel]="form.originComponentId"
+              (ngModelChange)="onOriginComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              @for (component of components(); track component.componentId) {
+                <option [ngValue]="+component.componentId!">{{ component.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-targetComponentId">Componente destino <i>*</i></label>
+            <select
+              id="field-targetComponentId"
+              name="targetComponentId"
+              [ngModel]="form.targetComponentId"
+              (ngModelChange)="onTargetComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              @for (component of availableTargetComponents(); track component.componentId) {
+                <option [ngValue]="+component.componentId!">{{ component.name }}</option>
+              }
+            </select>
+            <small class="field-hint">Debe ser distinto del componente origen.</small>
+          </div>
+
+          <div class="form-field">
+            <label for="field-dependencyTypeId">Tipo de dependencia <i>*</i></label>
+            <select
+              id="field-dependencyTypeId"
+              name="dependencyTypeId"
+              [ngModel]="form.dependencyTypeId"
+              (ngModelChange)="onDependencyTypeIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un tipo</option>
+              @for (type of dependencyTypes(); track type.dependencyTypeId) {
+                <option [ngValue]="+type.dependencyTypeId!">{{ type.typeName }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-dependencyScope">Alcance <i>*</i></label>
+            <select
+              id="field-dependencyScope"
+              name="dependencyScope"
+              [(ngModel)]="form.dependencyScope"
+              required
+            >
+              @for (option of scopeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-criticality">Criticidad</label>
+            <select id="field-criticality" name="criticality" [(ngModel)]="form.criticality">
+              <option value="">Sin definir</option>
+              @for (option of criticalityOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-description">Descripción</label>
+            <textarea
+              id="field-description"
+              name="description"
+              [(ngModel)]="form.description"
+              rows="3"
+              placeholder="Describe la relación entre origen y destino"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { Dependency } from './models/dependency.model';
+import { Dependency, DependencyRequest } from './models/dependency.model';
 
 @Injectable({ providedIn: 'root' })
 export class DependenciesService {
@@ -12,5 +12,9 @@ export class DependenciesService {
 
   getAllDependencies(): Observable<Dependency[]> {
     return this.http.get<Dependency[]>(`${this.baseUrl}/catalogos/dependencies`);
+  }
+
+  createDependency(body: DependencyRequest): Observable<Dependency> {
+    return this.http.post<Dependency>(`${this.baseUrl}/catalogos/dependencies`, body);
   }
 }

@@ -4,14 +4,28 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
+import { CatalogComponent } from '../../../catalogo-principal/components/componentes/models/component.model';
+import { DependencyTypesService } from '../tipos-de-dependencia/dependency-types.service';
+import { DependencyType } from '../tipos-de-dependencia/models/dependency-type.model';
 import { DependenciesService } from './dependencies.service';
 import {
   Criticality,
   Dependency,
+  DependencyRequest,
   DependencyScope,
 } from './models/dependency.model';
 
 type DependencyRow = Dependency & { _rowId: string };
+
+type DependencyForm = {
+  originComponentId: number | null;
+  targetComponentId: number | null;
+  dependencyTypeId: number | null;
+  dependencyScope: DependencyScope | '';
+  criticality: Criticality | '';
+  description: string;
+};
 
 @Component({
   selector: 'app-dependencias',
@@ -21,23 +35,40 @@ type DependencyRow = Dependency & { _rowId: string };
 })
 export class DependenciasComponent implements OnInit {
   private readonly dependenciesService = inject(DependenciesService);
+  private readonly componentsService = inject(ComponentsService);
+  private readonly dependencyTypesService = inject(DependencyTypesService);
   private readonly toastService = inject(ToastService);
 
-  private readonly scopeLabels: Record<DependencyScope, string> = {
-    INTERNAL: 'INTERNA',
-    EXTERNAL: 'EXTERNA',
-  };
+  readonly scopeOptions: { value: DependencyScope; label: string }[] = [
+    { value: 'INTERNAL', label: 'INTERNA' },
+    { value: 'EXTERNAL', label: 'EXTERNA' },
+  ];
 
-  private readonly criticalityLabels: Record<Criticality, string> = {
-    LOW: 'BAJA',
-    MEDIUM: 'MEDIA',
-    HIGH: 'ALTA',
-    CRITICAL: 'CRÍTICA',
-  };
+  readonly criticalityOptions: { value: Criticality; label: string }[] = [
+    { value: 'LOW', label: 'BAJA' },
+    { value: 'MEDIUM', label: 'MEDIA' },
+    { value: 'HIGH', label: 'ALTA' },
+    { value: 'CRITICAL', label: 'CRÍTICA' },
+  ];
+
+  private readonly scopeLabels = Object.fromEntries(
+    this.scopeOptions.map((option) => [option.value, option.label]),
+  ) as Record<DependencyScope, string>;
+
+  private readonly criticalityLabels = Object.fromEntries(
+    this.criticalityOptions.map((option) => [option.value, option.label]),
+  ) as Record<Criticality, string>;
 
   readonly rows = signal<DependencyRow[]>([]);
+  readonly components = signal<CatalogComponent[]>([]);
+  readonly dependencyTypes = signal<DependencyType[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  readonly selectedOriginId = signal<number | null>(null);
+  form: DependencyForm = this.emptyForm();
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -46,9 +77,9 @@ export class DependenciasComponent implements OnInit {
     return rows.filter((row) =>
       [
         row.dependencyId,
-        row.originComponentId,
-        row.targetComponentId,
-        row.dependencyTypeId,
+        this.componentName(row.originComponentId),
+        this.componentName(row.targetComponentId),
+        this.dependencyTypeName(row.dependencyTypeId),
         this.labelForScope(row.dependencyScope),
         this.labelForCriticality(row.criticality),
         row.description,
@@ -57,8 +88,62 @@ export class DependenciasComponent implements OnInit {
     );
   });
 
+  readonly availableTargetComponents = computed(() => {
+    const originId = this.selectedOriginId();
+    return this.components().filter(
+      (component) => Number(component.componentId) !== Number(originId),
+    );
+  });
+
   ngOnInit(): void {
     this.loadDependencies();
+    this.loadComponents();
+    this.loadDependencyTypes();
+  }
+
+  get canSubmit(): boolean {
+    return (
+      this.form.originComponentId != null &&
+      this.form.targetComponentId != null &&
+      this.form.dependencyTypeId != null &&
+      !!this.form.dependencyScope &&
+      this.form.originComponentId !== this.form.targetComponentId
+    );
+  }
+
+  onOriginComponentIdChange(value: number | string | null): void {
+    this.form.originComponentId = this.toId(value);
+    this.selectedOriginId.set(this.form.originComponentId);
+    if (
+      this.form.originComponentId != null &&
+      this.form.originComponentId === this.form.targetComponentId
+    ) {
+      this.form.targetComponentId = null;
+    }
+  }
+
+  onTargetComponentIdChange(value: number | string | null): void {
+    this.form.targetComponentId = this.toId(value);
+  }
+
+  onDependencyTypeIdChange(value: number | string | null): void {
+    this.form.dependencyTypeId = this.toId(value);
+  }
+
+  componentName(componentId: number | null | undefined): string {
+    if (componentId == null) return '—';
+    const match = this.components().find(
+      (component) => Number(component.componentId) === Number(componentId),
+    );
+    return match?.name?.trim() || String(componentId);
+  }
+
+  dependencyTypeName(dependencyTypeId: number | null | undefined): string {
+    if (dependencyTypeId == null) return '—';
+    const match = this.dependencyTypes().find(
+      (type) => Number(type.dependencyTypeId) === Number(dependencyTypeId),
+    );
+    return match?.typeName?.trim() || String(dependencyTypeId);
   }
 
   labelForScope(value: string | null | undefined): string {
@@ -75,6 +160,71 @@ export class DependenciasComponent implements OnInit {
     this.searchTerm.set('');
   }
 
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.selectedOriginId.set(null);
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadComponents();
+    this.loadDependencyTypes();
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.selectedOriginId.set(null);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const originComponentId = this.toId(this.form.originComponentId);
+    const targetComponentId = this.toId(this.form.targetComponentId);
+    const dependencyTypeId = this.toId(this.form.dependencyTypeId);
+    const dependencyScope = this.form.dependencyScope;
+
+    if (
+      originComponentId == null ||
+      targetComponentId == null ||
+      dependencyTypeId == null ||
+      !dependencyScope
+    ) {
+      this.formError.set('Completa los campos obligatorios.');
+      return;
+    }
+
+    if (originComponentId === targetComponentId) {
+      this.formError.set('El componente destino debe ser distinto del origen.');
+      return;
+    }
+
+    const description = this.form.description.trim();
+    const body: DependencyRequest = {
+      originComponentId,
+      targetComponentId,
+      dependencyTypeId,
+      dependencyScope,
+    };
+    if (this.form.criticality) body.criticality = this.form.criticality;
+    if (description) body.description = description;
+
+    this.saving.set(true);
+    this.formError.set('');
+
+    this.dependenciesService.createDependency(body).subscribe({
+      next: () => {
+        this.toastService.success('Dependencia creada correctamente');
+        this.closeModal();
+        this.loadDependencies();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
+  }
+
   private loadDependencies(): void {
     this.loading.set(true);
     this.dependenciesService.getAllDependencies().subscribe({
@@ -85,7 +235,29 @@ export class DependenciasComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
+      },
+    });
+  }
+
+  private loadComponents(): void {
+    this.componentsService.getComponents().subscribe({
+      next: (components) => {
+        this.components.set(Array.isArray(components) ? components : []);
+      },
+      error: () => {
+        this.components.set([]);
+      },
+    });
+  }
+
+  private loadDependencyTypes(): void {
+    this.dependencyTypesService.getAllDependencyTypes().subscribe({
+      next: (types) => {
+        this.dependencyTypes.set(Array.isArray(types) ? types : []);
+      },
+      error: () => {
+        this.dependencyTypes.set([]);
       },
     });
   }
@@ -97,7 +269,24 @@ export class DependenciasComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): DependencyForm {
+    return {
+      originComponentId: null,
+      targetComponentId: null,
+      dependencyTypeId: null,
+      dependencyScope: 'INTERNAL',
+      criticality: '',
+      description: '',
+    };
+  }
+
+  private toId(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const id = Number(value);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -105,6 +294,12 @@ export class DependenciasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar las dependencias.';
+    if (error.status === 409) {
+      return 'Conflicto: revisa que origen, destino y tipo existan y no violen restricciones.';
+    }
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    return action === 'list'
+      ? 'No fue posible cargar las dependencias.'
+      : 'No fue posible crear la dependencia.';
   }
 }
