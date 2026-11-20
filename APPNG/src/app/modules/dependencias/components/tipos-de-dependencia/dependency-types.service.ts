@@ -17,4 +17,8 @@ export class DependencyTypesService {
   createDependencyType(body: DependencyTypeRequest): Observable<DependencyType> {
     return this.http.post<DependencyType>(`${this.baseUrl}/catalogos/dependency-types`, body);
   }
+
+  updateDependencyType(id: number, body: DependencyTypeRequest): Observable<DependencyType> {
+    return this.http.put<DependencyType>(`${this.baseUrl}/catalogos/dependency-types/${id}`, body);
+  }
 }

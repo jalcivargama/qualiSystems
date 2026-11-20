@@ -28,6 +28,8 @@ export class TiposDeDependenciaComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingDependencyTypeId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: DependencyTypeForm = this.emptyForm();
@@ -56,13 +58,28 @@ export class TiposDeDependenciaComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingDependencyTypeId.set(null);
     this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  openEdit(row: DependencyTypeRow): void {
+    this.isEditing.set(true);
+    this.editingDependencyTypeId.set(row.dependencyTypeId ?? null);
+    this.form = {
+      typeCode: row.typeCode ?? '',
+      typeName: row.typeName ?? '',
+    };
     this.formError.set('');
     this.modalOpen.set(true);
   }
 
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingDependencyTypeId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -92,6 +109,28 @@ export class TiposDeDependenciaComponent implements OnInit {
 
     this.saving.set(true);
     this.formError.set('');
+
+    if (this.isEditing()) {
+      const id = this.editingDependencyTypeId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar el tipo de dependencia a actualizar.');
+        return;
+      }
+
+      this.dependencyTypesService.updateDependencyType(id, body).subscribe({
+        next: () => {
+          this.toastService.success('Tipo de dependencia actualizado correctamente');
+          this.closeModal();
+          this.loadDependencyTypes();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
 
     this.dependencyTypesService.createDependencyType(body).subscribe({
       next: () => {
@@ -135,7 +174,10 @@ export class TiposDeDependenciaComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -143,11 +185,13 @@ export class TiposDeDependenciaComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El tipo de dependencia no existe o ya fue eliminado.';
     if (error.status === 409) {
       return 'Conflicto: ya existe un tipo con ese código o nombre.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los tipos de dependencia.';
+    if (action === 'update') return 'No fue posible actualizar el tipo de dependencia.';
     return 'No fue posible crear el tipo de dependencia.';
   }
 }

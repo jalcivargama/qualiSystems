@@ -40,12 +40,13 @@
           <th>ID</th>
           <th>Código</th>
           <th>Nombre</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="3">
+            <td class="empty-cell" colspan="4">
               <strong>Cargando tipos de dependencia...</strong>
             </td>
           </tr>
@@ -55,10 +56,21 @@
               <td [title]="row.dependencyTypeId">{{ row.dependencyTypeId || '—' }}</td>
               <td [title]="row.typeCode || ''">{{ row.typeCode || '—' }}</td>
               <td [title]="row.typeName || ''">{{ row.typeName || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + row.typeName"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="3">
+              <td class="empty-cell" colspan="4">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -89,13 +101,19 @@
       class="record-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Crear tipo de dependencia"
+      [attr.aria-label]="isEditing() ? 'Editar tipo de dependencia' : 'Crear tipo de dependencia'"
     >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">dependency_type</span>
-          <h2>Nuevo tipo de dependencia</h2>
-          <p>Completa el código y el nombre para registrarlo en el catálogo.</p>
+          <h2>{{ isEditing() ? 'Editar tipo de dependencia' : 'Nuevo tipo de dependencia' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza el código y el nombre del tipo seleccionado.'
+                : 'Completa el código y el nombre para registrarlo en el catálogo.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -139,7 +157,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>
