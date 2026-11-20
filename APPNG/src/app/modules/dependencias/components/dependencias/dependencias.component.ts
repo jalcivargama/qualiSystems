@@ -5,7 +5,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
-import { CatalogComponent } from '../../../catalogo-principal/components/componentes/models/component.model';
+import {
+  CatalogComponent,
+  ComponentType,
+} from '../../../catalogo-principal/components/componentes/models/component.model';
 import { DependencyTypesService } from '../tipos-de-dependencia/dependency-types.service';
 import { DependencyType } from '../tipos-de-dependencia/models/dependency-type.model';
 import { DependenciesService } from './dependencies.service';
@@ -50,6 +53,15 @@ export class DependenciasComponent implements OnInit {
     { value: 'HIGH', label: 'ALTA' },
     { value: 'CRITICAL', label: 'CRÍTICA' },
   ];
+
+  private readonly componentTypeLabels: Record<ComponentType, string> = {
+    SYSTEM: 'SISTEMA',
+    API: 'API',
+    DATABASE: 'BASE DE DATOS',
+    INFRASTRUCTURE: 'INFRAESTRUCTURA',
+    EXTERNAL_SERVICE: 'SERVICIO EXTERNO',
+    MESSAGING: 'MENSAJERÍA',
+  };
 
   private readonly scopeLabels = Object.fromEntries(
     this.scopeOptions.map((option) => [option.value, option.label]),
@@ -138,6 +150,17 @@ export class DependenciasComponent implements OnInit {
       (component) => Number(component.componentId) === Number(componentId),
     );
     return match?.name?.trim() || String(componentId);
+  }
+
+  componentOptionLabel(component: CatalogComponent): string {
+    const name = component.name?.trim() || String(component.componentId ?? '—');
+    const typeLabel = this.labelForComponentType(component.componentType);
+    return `${name} - ${typeLabel}`;
+  }
+
+  labelForComponentType(value: string | null | undefined): string {
+    if (!value) return '—';
+    return this.componentTypeLabels[value as ComponentType] ?? value;
   }
 
   dependencyTypeName(dependencyTypeId: number | null | undefined): string {

@@ -141,7 +141,7 @@
             >
               <option [ngValue]="null">Selecciona un componente</option>
               @for (component of components(); track component.componentId) {
-                <option [ngValue]="+component.componentId!">{{ component.name }}</option>
+                <option [ngValue]="+component.componentId!">{{ componentOptionLabel(component) }}</option>
               }
             </select>
           </div>
@@ -157,7 +157,7 @@
             >
               <option [ngValue]="null">Selecciona un componente</option>
               @for (component of availableTargetComponents(); track component.componentId) {
-                <option [ngValue]="+component.componentId!">{{ component.name }}</option>
+                <option [ngValue]="+component.componentId!">{{ componentOptionLabel(component) }}</option>
               }
             </select>
             <small class="field-hint">Debe ser distinto del componente origen.</small>
