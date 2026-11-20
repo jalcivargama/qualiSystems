@@ -13,6 +13,7 @@ import {
   Environment,
   SystemDeployment,
   SystemDeploymentRequest,
+  SystemDeploymentUpdateRequest,
 } from './models/system-deployment.model';
 
 type DeploymentRow = SystemDeployment & { _rowId: string };
@@ -37,16 +38,18 @@ export class DesplieguesComponent implements OnInit {
 
   readonly environmentOptions: { value: Environment; label: string }[] = [
     { value: 'DEVELOPMENT', label: 'DESARROLLO' },
-    { value: 'TEST', label: 'PRUEBAS' },
     { value: 'QA', label: 'QA' },
-    { value: 'STAGING', label: 'STAGING' },
     { value: 'PRODUCTION', label: 'PRODUCCIÓN' },
-    { value: 'DR', label: 'DR' },
   ];
 
-  private readonly environmentLabels = Object.fromEntries(
-    this.environmentOptions.map((option) => [option.value, option.label]),
-  ) as Record<Environment, string>;
+  private readonly environmentLabels: Record<Environment, string> = {
+    DEVELOPMENT: 'DESARROLLO',
+    TEST: 'PRUEBAS',
+    QA: 'QA',
+    STAGING: 'STAGING',
+    PRODUCTION: 'PRODUCCIÓN',
+    DR: 'DR',
+  };
 
   readonly rows = signal<DeploymentRow[]>([]);
   readonly components = signal<CatalogComponent[]>([]);
@@ -54,6 +57,8 @@ export class DesplieguesComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingDeploymentId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   readonly selectedComponentId = signal<number | null>(null);
@@ -72,13 +77,30 @@ export class DesplieguesComponent implements OnInit {
 
   readonly availableEnvironments = computed(() => {
     const componentId = this.selectedComponentId();
-    if (componentId == null) return this.environmentOptions;
+    const editingId = this.editingDeploymentId();
     const used = new Set(
       this.rows()
-        .filter((row) => Number(row.componentId) === componentId)
+        .filter(
+          (row) =>
+            componentId != null &&
+            Number(row.componentId) === componentId &&
+            (editingId == null || Number(row.deploymentId) !== editingId),
+        )
         .map((row) => row.environment),
     );
-    return this.environmentOptions.filter((option) => !used.has(option.value));
+
+    const options = [...this.environmentOptions];
+    const current = this.form.environment;
+    if (
+      current &&
+      !options.some((option) => option.value === current) &&
+      this.environmentLabels[current]
+    ) {
+      options.unshift({ value: current, label: this.environmentLabels[current] });
+    }
+
+    if (componentId == null) return options;
+    return options.filter((option) => !used.has(option.value));
   });
 
   readonly filteredRows = computed(() => {
@@ -102,7 +124,8 @@ export class DesplieguesComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return this.resolveComponentId() != null && !!this.form.environment;
+    const componentId = this.resolveComponentId() ?? this.selectedComponentId();
+    return componentId != null && !!this.form.environment;
   }
 
   onComponentIdChange(value: number | string | null): void {
@@ -135,6 +158,8 @@ export class DesplieguesComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingDeploymentId.set(null);
     this.form = this.emptyForm();
     this.selectedComponentId.set(null);
     this.formError.set('');
@@ -143,8 +168,24 @@ export class DesplieguesComponent implements OnInit {
     this.loadComponents();
   }
 
+  openEdit(row: DeploymentRow): void {
+    const componentId = this.toComponentId(row.componentId);
+    this.isEditing.set(true);
+    this.editingDeploymentId.set(row.deploymentId ?? null);
+    this.form = {
+      componentId,
+      environment: row.environment ?? '',
+      url: row.url ?? '',
+    };
+    this.selectedComponentId.set(componentId);
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingDeploymentId.set(null);
     this.selectedComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
@@ -153,7 +194,7 @@ export class DesplieguesComponent implements OnInit {
   save(): void {
     if (this.saving() || !this.canSubmit) return;
 
-    const componentId = this.resolveComponentId();
+    const componentId = this.resolveComponentId() ?? this.selectedComponentId();
     const environment = this.form.environment;
     if (componentId == null || !environment) {
       this.formError.set('Completa los campos obligatorios.');
@@ -170,10 +211,38 @@ export class DesplieguesComponent implements OnInit {
     this.formError.set('');
     this.form.componentId = componentId;
 
-    const body: SystemDeploymentRequest = { componentId, environment };
-    if (url) body.url = url;
+    if (this.isEditing()) {
+      const id = this.editingDeploymentId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar el despliegue a actualizar.');
+        return;
+      }
 
-    this.systemDeploymentsService.createSystemDeployment(body).subscribe({
+      const updateBody: SystemDeploymentUpdateRequest = {
+        componentId,
+        environment,
+        url: url || null,
+      };
+
+      this.systemDeploymentsService.updateSystemDeployment(id, updateBody).subscribe({
+        next: () => {
+          this.toastService.success('Despliegue actualizado correctamente');
+          this.closeModal();
+          this.loadDeployments();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createBody: SystemDeploymentRequest = { componentId, environment };
+    if (url) createBody.url = url;
+
+    this.systemDeploymentsService.createSystemDeployment(createBody).subscribe({
       next: () => {
         this.toastService.success('Despliegue creado correctamente');
         this.closeModal();
@@ -248,7 +317,10 @@ export class DesplieguesComponent implements OnInit {
     return Number.isFinite(id) ? id : null;
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -256,11 +328,13 @@ export class DesplieguesComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El despliegue no existe o ya fue eliminado.';
     if (error.status === 409) {
       return 'Conflicto: ese sistema ya tiene despliegue en el ambiente, o el system-detail no existe.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los despliegues.';
+    if (action === 'update') return 'No fue posible actualizar el despliegue.';
     return 'No fue posible crear el despliegue.';
   }
 }

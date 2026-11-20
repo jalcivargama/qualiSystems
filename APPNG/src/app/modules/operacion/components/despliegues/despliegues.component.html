@@ -41,12 +41,13 @@
           <th>Sistema</th>
           <th>Ambiente</th>
           <th>URL</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="4">
+            <td class="empty-cell" colspan="5">
               <strong>Cargando despliegues...</strong>
             </td>
           </tr>
@@ -59,10 +60,21 @@
                 {{ labelForEnvironment(row.environment) }}
               </td>
               <td [title]="row.url || ''">{{ row.url || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar despliegue ' + (row.deploymentId || '')"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="4">
+              <td class="empty-cell" colspan="5">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -72,6 +84,9 @@
                       : 'Crea el primer despliegue para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -86,12 +101,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear despliegue">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar despliegue' : 'Crear despliegue'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">system_deployment</span>
-          <h2>Nuevo despliegue</h2>
-          <p>Selecciona un sistema con detalle y define su ambiente.</p>
+          <h2>{{ isEditing() ? 'Editar despliegue' : 'Nuevo despliegue' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza el sistema, ambiente o URL del despliegue.'
+                : 'Selecciona un sistema con detalle y define su ambiente.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -157,7 +183,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>

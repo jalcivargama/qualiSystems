@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { SystemDeployment, SystemDeploymentRequest } from './models/system-deployment.model';
+import {
+  SystemDeployment,
+  SystemDeploymentRequest,
+  SystemDeploymentUpdateRequest,
+} from './models/system-deployment.model';
 
 @Injectable({ providedIn: 'root' })
 export class SystemDeploymentsService {
@@ -16,5 +20,15 @@ export class SystemDeploymentsService {
 
   createSystemDeployment(body: SystemDeploymentRequest): Observable<SystemDeployment> {
     return this.http.post<SystemDeployment>(`${this.baseUrl}/catalogos/system-deployments`, body);
+  }
+
+  updateSystemDeployment(
+    id: number,
+    body: SystemDeploymentUpdateRequest,
+  ): Observable<SystemDeployment> {
+    return this.http.put<SystemDeployment>(
+      `${this.baseUrl}/catalogos/system-deployments/${id}`,
+      body,
+    );
   }
 }

@@ -16,3 +16,6 @@ export interface SystemDeployment {
 
 /** Body para CREATE (sin deploymentId) */
 export type SystemDeploymentRequest = Omit<SystemDeployment, 'deploymentId'>;
+
+/** Body para UPDATE (sin deploymentId; el id va en la URL) */
+export type SystemDeploymentUpdateRequest = Omit<SystemDeployment, 'deploymentId'>;
