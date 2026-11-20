@@ -7,10 +7,10 @@ import { ToastService } from '../../../../../core/toast.service';
 import { ComponentsService } from '../components.service';
 import {
   ActiveFlag,
+  CatalogComponent,
+  ComponentRequest,
   ComponentType,
-  CreateNewComponentDto,
-} from '../models/create.component.dto';
-import { CatalogComponent, UpdateComponentDto } from '../models/catalog.component';
+} from '../models/component.model';
 
 type ComponentRow = CatalogComponent & { _rowId: string };
 
@@ -159,7 +159,7 @@ export class ComponentesComponent implements OnInit {
         return;
       }
 
-      const updateDto: UpdateComponentDto = {
+      const body: ComponentRequest = {
         componentType: this.form.componentType,
         name,
         acronym: acronym || null,
@@ -167,7 +167,7 @@ export class ComponentesComponent implements OnInit {
         isActive: this.form.isActive,
       };
 
-      this.componentsService.updateComponent(id, updateDto).subscribe({
+      this.componentsService.updateComponent(id, body).subscribe({
         next: () => {
           this.toastService.success('Componente actualizado correctamente');
           this.closeModal();
@@ -181,15 +181,15 @@ export class ComponentesComponent implements OnInit {
       return;
     }
 
-    const createDto: CreateNewComponentDto = {
+    const body: ComponentRequest = {
       componentType: this.form.componentType,
       name,
       isActive: this.form.isActive,
     };
-    if (acronym) createDto.acronym = acronym;
-    if (description) createDto.description = description;
+    if (acronym) body.acronym = acronym;
+    if (description) body.description = description;
 
-    this.componentsService.createNewComponent(createDto).subscribe({
+    this.componentsService.createNewComponent(body).subscribe({
       next: () => {
         this.toastService.success('Componente creado correctamente');
         this.closeModal();
