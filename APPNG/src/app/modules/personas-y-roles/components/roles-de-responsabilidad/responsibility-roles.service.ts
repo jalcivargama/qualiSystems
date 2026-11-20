@@ -2,7 +2,10 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { ResponsibilityRole } from './models/responsibility-role.model';
+import {
+  ResponsibilityRole,
+  ResponsibilityRoleRequest,
+} from './models/responsibility-role.model';
 
 @Injectable({ providedIn: 'root' })
 export class ResponsibilityRolesService {
@@ -12,5 +15,12 @@ export class ResponsibilityRolesService {
 
   getAllResponsibilityRoles(): Observable<ResponsibilityRole[]> {
     return this.http.get<ResponsibilityRole[]>(`${this.baseUrl}/catalogos/responsibility-roles`);
+  }
+
+  createResponsibilityRole(body: ResponsibilityRoleRequest): Observable<ResponsibilityRole> {
+    return this.http.post<ResponsibilityRole>(
+      `${this.baseUrl}/catalogos/responsibility-roles`,
+      body,
+    );
   }
 }

@@ -8,6 +8,7 @@
     <h1>Roles de responsabilidad</h1>
     <p>Roles disponibles para asignar responsables a los sistemas.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -60,7 +61,10 @@
               <td class="empty-cell" colspan="3">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
-                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'No hay roles registrados todavía.' }}</small>
+                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea el primer rol para comenzar.' }}</small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -72,3 +76,63 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear rol">
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">responsibility_role</span>
+          <h2>Nuevo rol</h2>
+          <p>Completa los campos para registrarlo en el catálogo.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-roleCode">Código <i>*</i></label>
+            <input
+              id="field-roleCode"
+              name="roleCode"
+              type="text"
+              [(ngModel)]="form.roleCode"
+              required
+              maxlength="40"
+              placeholder="Ingresa código"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-roleName">Nombre del rol <i>*</i></label>
+            <input
+              id="field-roleName"
+              name="roleName"
+              type="text"
+              [(ngModel)]="form.roleName"
+              required
+              maxlength="100"
+              placeholder="Ingresa nombre del rol"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

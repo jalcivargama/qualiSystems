@@ -5,9 +5,17 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
 import { ResponsibilityRolesService } from './responsibility-roles.service';
-import { ResponsibilityRole } from './models/responsibility-role.model';
+import {
+  ResponsibilityRole,
+  ResponsibilityRoleRequest,
+} from './models/responsibility-role.model';
 
 type RoleRow = ResponsibilityRole & { _rowId: string };
+
+type RoleForm = {
+  roleCode: string;
+  roleName: string;
+};
 
 @Component({
   selector: 'app-roles-de-responsabilidad',
@@ -22,6 +30,10 @@ export class RolesDeResponsabilidadComponent implements OnInit {
   readonly rows = signal<RoleRow[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  form: RoleForm = this.emptyForm();
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -38,8 +50,63 @@ export class RolesDeResponsabilidadComponent implements OnInit {
     this.loadRoles();
   }
 
+  get canSubmit(): boolean {
+    return this.form.roleCode.trim().length > 0 && this.form.roleName.trim().length > 0;
+  }
+
   clearSearch(): void {
     this.searchTerm.set('');
+  }
+
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const roleCode = this.form.roleCode.trim();
+    const roleName = this.form.roleName.trim();
+
+    if (!roleCode || !roleName) {
+      this.formError.set('Completa los campos obligatorios.');
+      return;
+    }
+
+    if (roleCode.length > 40) {
+      this.formError.set('El código no puede superar 40 caracteres.');
+      return;
+    }
+
+    if (roleName.length > 100) {
+      this.formError.set('El nombre no puede superar 100 caracteres.');
+      return;
+    }
+
+    const body: ResponsibilityRoleRequest = { roleCode, roleName };
+
+    this.saving.set(true);
+    this.formError.set('');
+
+    this.rolesService.createResponsibilityRole(body).subscribe({
+      next: () => {
+        this.toastService.success('Rol creado correctamente');
+        this.closeModal();
+        this.loadRoles();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
   }
 
   private loadRoles(): void {
@@ -52,7 +119,7 @@ export class RolesDeResponsabilidadComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });
   }
@@ -64,7 +131,14 @@ export class RolesDeResponsabilidadComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): RoleForm {
+    return {
+      roleCode: '',
+      roleName: '',
+    };
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -72,6 +146,10 @@ export class RolesDeResponsabilidadComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar los roles de responsabilidad.';
+    if (error.status === 409) return 'Ya existe un rol con ese código o nombre.';
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    return action === 'list'
+      ? 'No fue posible cargar los roles de responsabilidad.'
+      : 'No fue posible crear el rol.';
   }
 }
