@@ -25,4 +25,8 @@ export class DatabaseDetailsService {
   updateDatabaseDetail(id: number, body: DatabaseDetailUpdateRequest): Observable<DatabaseDetail> {
     return this.http.put<DatabaseDetail>(`${this.baseUrl}/catalogos/database-details/${id}`, body);
   }
+
+  deleteDatabaseDetail(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/database-details/${id}`);
+  }
 }

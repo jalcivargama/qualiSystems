@@ -42,6 +42,7 @@ export class BasesDeDatosComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: DatabaseForm = this.emptyForm();
 
@@ -131,10 +132,41 @@ export class BasesDeDatosComponent implements OnInit {
     this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingComponentId() ?? this.resolveComponentId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el detalle de base de datos a eliminar.');
+      return;
+    }
+
+    const label = this.componentName(id);
+    if (!window.confirm(`¿Eliminar el detalle de base de datos "${label !== '—' ? label : id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.databaseDetailsService.deleteDatabaseDetail(id).subscribe({
+      next: () => {
+        this.toastService.success('Detalle de base de datos eliminado correctamente');
+        this.closeModal();
+        this.loadDatabaseDetails();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const componentId = this.resolveComponentId() ?? this.editingComponentId();
     if (componentId == null) {
@@ -268,7 +300,7 @@ export class BasesDeDatosComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -279,6 +311,9 @@ export class BasesDeDatosComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El detalle de base de datos no existe o ya fue eliminado.';
     if (error.status === 409) {
+      if (action === 'delete') {
+        return 'No se puede eliminar: la base de datos tiene registros relacionados.';
+      }
       return action === 'update'
         ? 'No se puede actualizar por restricciones relacionadas.'
         : 'Conflicto: el componente ya tiene detalle o no es de tipo BASE DE DATOS.';
@@ -286,6 +321,7 @@ export class BasesDeDatosComponent implements OnInit {
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los detalles de base de datos.';
     if (action === 'update') return 'No fue posible actualizar el detalle de base de datos.';
+    if (action === 'delete') return 'No fue posible eliminar el detalle de base de datos.';
     return 'No fue posible crear el detalle de base de datos.';
   }
 }
