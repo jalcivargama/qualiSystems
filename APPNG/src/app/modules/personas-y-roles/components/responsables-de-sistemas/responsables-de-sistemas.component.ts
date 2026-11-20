@@ -44,6 +44,7 @@ export class ResponsablesDeSistemasComponent implements OnInit {
   readonly modalOpen = signal(false);
   readonly isEditing = signal(false);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   readonly selectedComponentId = signal<number | null>(null);
   readonly selectedPersonId = signal<number | null>(null);
@@ -203,10 +204,45 @@ export class ResponsablesDeSistemasComponent implements OnInit {
     this.selectedPersonId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const componentId = this.toId(this.form.componentId);
+    const personId = this.toId(this.form.personId);
+    const roleId = this.toId(this.form.roleId);
+    if (componentId == null || personId == null || roleId == null) {
+      this.toastService.error('No se pudo identificar la responsabilidad a eliminar.');
+      return;
+    }
+
+    const label = `${this.componentName(componentId)} / ${this.personName(personId)} / ${this.roleName(roleId)}`;
+    if (!window.confirm(`¿Eliminar la responsabilidad "${label}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.systemResponsibilitiesService
+      .deleteSystemResponsibility(componentId, personId, roleId)
+      .subscribe({
+        next: () => {
+          this.toastService.success('Responsabilidad de sistema eliminada correctamente');
+          this.closeModal();
+          this.loadSystemResponsibilities();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.deleting.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+        },
+      });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const componentId = this.toId(this.form.componentId);
     const personId = this.toId(this.form.personId);
@@ -334,7 +370,7 @@ export class ResponsablesDeSistemasComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -347,11 +383,14 @@ export class ResponsablesDeSistemasComponent implements OnInit {
       return 'La responsabilidad de sistema no existe o ya fue eliminada.';
     }
     if (error.status === 409) {
-      return 'Conflicto: la asignación ya existe o sistema/persona/rol no es válido.';
+      return action === 'delete'
+        ? 'No se puede eliminar: la responsabilidad tiene relaciones asociadas.'
+        : 'Conflicto: la asignación ya existe o sistema/persona/rol no es válido.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar las responsabilidades de sistema.';
     if (action === 'update') return 'No fue posible actualizar la responsabilidad de sistema.';
+    if (action === 'delete') return 'No fue posible eliminar la responsabilidad de sistema.';
     return 'No fue posible crear la responsabilidad de sistema.';
   }
 }

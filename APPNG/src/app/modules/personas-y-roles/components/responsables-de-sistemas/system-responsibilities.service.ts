@@ -34,4 +34,14 @@ export class SystemResponsibilitiesService {
       body,
     );
   }
+
+  deleteSystemResponsibility(
+    componentId: number,
+    personId: number,
+    roleId: number,
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${this.baseUrl}/catalogos/system-responsibilities/${componentId}/${personId}/${roleId}`,
+    );
+  }
 }
