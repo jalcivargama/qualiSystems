@@ -25,4 +25,8 @@ export class SystemDetailsService {
   updateSystemDetail(id: number, body: SystemDetailUpdateRequest): Observable<SystemDetail> {
     return this.http.put<SystemDetail>(`${this.baseUrl}/catalogos/system-details/${id}`, body);
   }
+
+  deleteSystemDetail(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/system-details/${id}`);
+  }
 }

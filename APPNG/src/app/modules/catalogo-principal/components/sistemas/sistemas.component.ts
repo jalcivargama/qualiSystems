@@ -68,6 +68,7 @@ export class SistemasComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: SystemForm = this.emptyForm();
 
@@ -171,10 +172,41 @@ export class SistemasComponent implements OnInit {
     this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingComponentId() ?? this.resolveComponentId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el detalle de sistema a eliminar.');
+      return;
+    }
+
+    const label = this.componentName(id);
+    if (!window.confirm(`¿Eliminar el detalle de sistema "${label !== '—' ? label : id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.systemDetailsService.deleteSystemDetail(id).subscribe({
+      next: () => {
+        this.toastService.success('Detalle de sistema eliminado correctamente');
+        this.closeModal();
+        this.loadSystemDetails();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     if (!this.form.systemStatus) {
       this.formError.set('Completa los campos obligatorios.');
@@ -312,7 +344,7 @@ export class SistemasComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -323,6 +355,9 @@ export class SistemasComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El detalle de sistema no existe o ya fue eliminado.';
     if (error.status === 409) {
+      if (action === 'delete') {
+        return 'No se puede eliminar: el sistema tiene registros relacionados.';
+      }
       return action === 'update'
         ? 'No se puede actualizar por restricciones relacionadas.'
         : 'Conflicto: el componente ya tiene detalle o no es de tipo SISTEMA.';
@@ -330,6 +365,7 @@ export class SistemasComponent implements OnInit {
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los detalles de sistema.';
     if (action === 'update') return 'No fue posible actualizar el detalle de sistema.';
+    if (action === 'delete') return 'No fue posible eliminar el detalle de sistema.';
     return 'No fue posible crear el detalle de sistema.';
   }
 }
