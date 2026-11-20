@@ -61,6 +61,7 @@ export class ComponentesComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: CreateForm = this.emptyForm();
 
@@ -121,14 +122,44 @@ export class ComponentesComponent implements OnInit {
     this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
   }
 
   clearSearch(): void {
     this.searchTerm.set('');
   }
 
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingComponentId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el componente a eliminar.');
+      return;
+    }
+
+    if (!window.confirm(`¿Eliminar el componente "${this.form.name.trim() || id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.componentsService.deleteComponent(id).subscribe({
+      next: () => {
+        this.toastService.success('Componente eliminado correctamente');
+        this.closeModal();
+        this.loadComponents();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
+  }
+
   save(): void {
-    if (this.saving()) return;
+    if (this.saving() || this.deleting()) return;
 
     const name = this.form.name.trim();
     if (!this.form.componentType || !name || !this.form.isActive) {
@@ -236,7 +267,7 @@ export class ComponentesComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -246,10 +277,15 @@ export class ComponentesComponent implements OnInit {
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El componente no existe o ya fue eliminado.';
-    if (error.status === 409) return 'Ya existe un componente con ese nombre y tipo.';
+    if (error.status === 409) {
+      return action === 'delete'
+        ? 'No se puede eliminar: el componente tiene registros relacionados.'
+        : 'Ya existe un componente con ese nombre y tipo.';
+    }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los componentes.';
     if (action === 'update') return 'No fue posible actualizar el componente.';
+    if (action === 'delete') return 'No fue posible eliminar el componente.';
     return 'No fue posible crear el componente.';
   }
 }

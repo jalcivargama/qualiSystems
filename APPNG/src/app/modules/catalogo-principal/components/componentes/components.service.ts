@@ -21,4 +21,8 @@ export class ComponentsService {
   updateComponent(id: number, body: ComponentRequest): Observable<CatalogComponent> {
     return this.http.put<CatalogComponent>(`${this.baseUrl}/catalogos/componentes/${id}`, body);
   }
+
+  deleteComponent(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/componentes/${id}`);
+  }
 }

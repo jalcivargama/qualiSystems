@@ -96,13 +96,12 @@
 </section>
 
 @if (modalOpen()) {
-  <div class="modal-backdrop" (click)="closeModal()">
+  <div class="modal-backdrop">
     <section
       class="record-modal"
       role="dialog"
       aria-modal="true"
       [attr.aria-label]="isEditing() ? 'Editar componente' : 'Crear componente'"
-      (click)="$event.stopPropagation()"
     >
       <div class="modal-heading">
         <div>
@@ -180,15 +179,34 @@
           <div class="error-banner" role="alert">{{ formError() }}</div>
         }
 
-        <div class="modal-actions">
-          <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">Cancelar</button>
-          <button type="submit" class="primary-button" [disabled]="saving()">
-            @if (saving()) {
-              {{ isEditing() ? 'Guardando...' : 'Creando...' }}
-            } @else {
-              {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
-            }
-          </button>
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting()">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
         </div>
       </form>
     </section>

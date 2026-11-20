@@ -438,10 +438,20 @@ tbody tr:hover {
 .modal-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 8px;
   margin-top: 21px;
   padding-top: 15px;
   border-top: 1px solid #edf0ed;
+}
+.modal-actions.has-delete {
+  justify-content: space-between;
+}
+.modal-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 .secondary-button {
   border-color: #e1e7e2;
@@ -450,6 +460,29 @@ tbody tr:hover {
 }
 .secondary-button:hover {
   background: #f7f9f7;
+}
+.danger-button {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid #c86b63;
+  background: #fff;
+  color: #a13d36;
+  font: inherit;
+  font-weight: 600;
+  font-size: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+.danger-button:hover:not(:disabled) {
+  background: #fff3f0;
+}
+.danger-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .not-found {
   text-align: center;
