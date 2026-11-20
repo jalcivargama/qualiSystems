@@ -17,4 +17,8 @@ export class TechnologiesService {
   createTechnology(body: TechnologyRequest): Observable<Technology> {
     return this.http.post<Technology>(`${this.baseUrl}/catalogos/technologies`, body);
   }
+
+  updateTechnology(id: number, body: TechnologyRequest): Observable<Technology> {
+    return this.http.put<Technology>(`${this.baseUrl}/catalogos/technologies/${id}`, body);
+  }
 }

@@ -49,6 +49,8 @@ export class TecnologiasComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingTechnologyId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: TechnologyForm = this.emptyForm();
@@ -82,13 +84,28 @@ export class TecnologiasComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingTechnologyId.set(null);
     this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  openEdit(row: TechnologyRow): void {
+    this.isEditing.set(true);
+    this.editingTechnologyId.set(row.technologyId ?? null);
+    this.form = {
+      category: row.category ?? '',
+      name: row.name ?? '',
+    };
     this.formError.set('');
     this.modalOpen.set(true);
   }
 
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingTechnologyId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -113,6 +130,28 @@ export class TecnologiasComponent implements OnInit {
 
     this.saving.set(true);
     this.formError.set('');
+
+    if (this.isEditing()) {
+      const id = this.editingTechnologyId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar la tecnología a actualizar.');
+        return;
+      }
+
+      this.technologiesService.updateTechnology(id, body).subscribe({
+        next: () => {
+          this.toastService.success('Tecnología actualizada correctamente');
+          this.closeModal();
+          this.loadTechnologies();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
 
     this.technologiesService.createTechnology(body).subscribe({
       next: () => {
@@ -156,7 +195,10 @@ export class TecnologiasComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -164,11 +206,13 @@ export class TecnologiasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'La tecnología no existe o ya fue eliminada.';
     if (error.status === 409) {
       return 'Conflicto: ya existe una tecnología con esa categoría y nombre.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar las tecnologías.';
+    if (action === 'update') return 'No fue posible actualizar la tecnología.';
     return 'No fue posible crear la tecnología.';
   }
 }

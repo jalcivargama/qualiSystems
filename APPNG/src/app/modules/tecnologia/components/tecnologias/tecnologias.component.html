@@ -40,12 +40,13 @@
           <th>ID</th>
           <th>Categoría</th>
           <th>Nombre</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="3">
+            <td class="empty-cell" colspan="4">
               <strong>Cargando tecnologías...</strong>
             </td>
           </tr>
@@ -55,10 +56,21 @@
               <td [title]="row.technologyId">{{ row.technologyId || '—' }}</td>
               <td [title]="labelForCategory(row.category)">{{ labelForCategory(row.category) }}</td>
               <td [title]="row.name || ''">{{ row.name || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + row.name"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="3">
+              <td class="empty-cell" colspan="4">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -68,6 +80,9 @@
                       : 'Crea la primera tecnología para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -82,12 +97,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear tecnología">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar tecnología' : 'Crear tecnología'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">technology</span>
-          <h2>Nueva tecnología</h2>
-          <p>Completa la categoría y el nombre para registrarla en el catálogo.</p>
+          <h2>{{ isEditing() ? 'Editar tecnología' : 'Nueva tecnología' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza la categoría y el nombre de la tecnología.'
+                : 'Completa la categoría y el nombre para registrarla en el catálogo.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -128,7 +154,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>
