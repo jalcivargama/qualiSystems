@@ -7,9 +7,18 @@ import { ToastService } from '../../../../../core/toast.service';
 import { ComponentsService } from '../../componentes/components.service';
 import { CatalogComponent } from '../../componentes/models/component.model';
 import { ApisService } from '../apis.service';
-import { ApiDetail } from '../models/api-detail.model';
+import { ApiDetail, ApiDetailRequest } from '../models/api-detail.model';
 
 type ApiRow = ApiDetail & { _rowId: string };
+
+type ApiForm = {
+  componentId: number | null;
+  apiVersion: string;
+  url: string;
+  protocol: string;
+  authenticationMethod: string;
+  slaDescription: string;
+};
 
 @Component({
   selector: 'app-apis',
@@ -22,10 +31,30 @@ export class ApisComponent implements OnInit {
   private readonly componentsService = inject(ComponentsService);
   private readonly toastService = inject(ToastService);
 
+  readonly protocolOptions = ['REST', 'SOAP', 'GraphQL', 'gRPC', 'HTTPS', 'HTTP', 'Otro'];
+
   readonly rows = signal<ApiRow[]>([]);
   readonly components = signal<CatalogComponent[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  form: ApiForm = this.emptyForm();
+
+  readonly availableApiComponents = computed(() => {
+    const usedIds = new Set(
+      this.rows()
+        .map((row) => Number(row.componentId))
+        .filter((id) => Number.isFinite(id)),
+    );
+    return this.components().filter((component) => {
+      const type = String(component.componentType ?? '').trim().toUpperCase();
+      const active = String(component.isActive ?? '').trim().toUpperCase();
+      const id = Number(component.componentId);
+      return type === 'API' && active === 'Y' && Number.isFinite(id) && !usedIds.has(id);
+    });
+  });
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -48,6 +77,14 @@ export class ApisComponent implements OnInit {
     this.loadComponents();
   }
 
+  get canSubmit(): boolean {
+    return this.resolveComponentId() != null;
+  }
+
+  onComponentIdChange(value: number | string | null): void {
+    this.form.componentId = this.toComponentId(value);
+  }
+
   componentName(componentId: number | null | undefined): string {
     if (componentId == null) return '—';
     const match = this.components().find(
@@ -60,6 +97,75 @@ export class ApisComponent implements OnInit {
     this.searchTerm.set('');
   }
 
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadComponents();
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const componentId = this.resolveComponentId();
+    if (componentId == null) {
+      this.formError.set('Selecciona un componente API.');
+      return;
+    }
+
+    const apiVersion = this.form.apiVersion.trim();
+    const url = this.form.url.trim();
+    const protocol = this.form.protocol.trim();
+    const authenticationMethod = this.form.authenticationMethod.trim();
+    const slaDescription = this.form.slaDescription.trim();
+
+    if (apiVersion.length > 50) {
+      this.formError.set('La versión no puede superar 50 caracteres.');
+      return;
+    }
+    if (url.length > 2000) {
+      this.formError.set('La URL no puede superar 2000 caracteres.');
+      return;
+    }
+    if (protocol.length > 30) {
+      this.formError.set('El protocolo no puede superar 30 caracteres.');
+      return;
+    }
+    if (authenticationMethod.length > 100) {
+      this.formError.set('El método de autenticación no puede superar 100 caracteres.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.formError.set('');
+    this.form.componentId = componentId;
+
+    const body: ApiDetailRequest = { componentId };
+    if (apiVersion) body.apiVersion = apiVersion;
+    if (url) body.url = url;
+    if (protocol) body.protocol = protocol;
+    if (authenticationMethod) body.authenticationMethod = authenticationMethod;
+    if (slaDescription) body.slaDescription = slaDescription;
+
+    this.apisService.createApiDetail(body).subscribe({
+      next: () => {
+        this.toastService.success('Detalle de API creado correctamente');
+        this.closeModal();
+        this.loadApiDetails();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
+  }
+
   private loadApiDetails(): void {
     this.loading.set(true);
     this.apisService.getAllApiDetails().subscribe({
@@ -70,7 +176,7 @@ export class ApisComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });
   }
@@ -93,7 +199,28 @@ export class ApisComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): ApiForm {
+    return {
+      componentId: null,
+      apiVersion: '',
+      url: '',
+      protocol: '',
+      authenticationMethod: '',
+      slaDescription: '',
+    };
+  }
+
+  private resolveComponentId(): number | null {
+    return this.toComponentId(this.form.componentId);
+  }
+
+  private toComponentId(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const id = Number(value);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -101,6 +228,11 @@ export class ApisComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar los detalles de API.';
+    if (error.status === 409) {
+      return 'Conflicto: el componente ya tiene detalle o no es de tipo API.';
+    }
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    if (action === 'list') return 'No fue posible cargar los detalles de API.';
+    return 'No fue posible crear el detalle de API.';
   }
 }

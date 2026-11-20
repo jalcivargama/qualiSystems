@@ -8,6 +8,7 @@
     <h1>APIs</h1>
     <p>Versiones, endpoints, protocolo, autenticación y SLA.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -70,7 +71,7 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'Aún no hay APIs registradas.'
+                      : 'Crea el primer detalle de API para comenzar.'
                   }}
                 </small>
               </td>
@@ -84,3 +85,117 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear detalle de API">
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">api_detail</span>
+          <h2>Nuevo detalle de API</h2>
+          <p>Selecciona un componente API y completa sus datos.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-componentId">Componente API <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              <option
+                *ngFor="let component of availableApiComponents()"
+                [ngValue]="+component.componentId!"
+              >
+                {{ component.name }}
+              </option>
+            </select>
+            <small class="field-hint">Solo componentes tipo API activos y sin detalle asociado.</small>
+            @if (availableApiComponents().length === 0) {
+              <small class="field-hint">No hay componentes API activos disponibles para asociar.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-apiVersion">Versión</label>
+            <input
+              id="field-apiVersion"
+              name="apiVersion"
+              type="text"
+              [(ngModel)]="form.apiVersion"
+              maxlength="50"
+              placeholder="Ej. 1.0.0"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-protocol">Protocolo</label>
+            <select id="field-protocol" name="protocol" [(ngModel)]="form.protocol">
+              <option value="">Sin definir</option>
+              @for (option of protocolOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-url">URL</label>
+            <input
+              id="field-url"
+              name="url"
+              type="url"
+              [(ngModel)]="form.url"
+              maxlength="2000"
+              placeholder="https://api.ejemplo.com/v1"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-authenticationMethod">Autenticación</label>
+            <input
+              id="field-authenticationMethod"
+              name="authenticationMethod"
+              type="text"
+              [(ngModel)]="form.authenticationMethod"
+              maxlength="100"
+              placeholder="Ej. Bearer JWT"
+            />
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-slaDescription">Descripción de SLA</label>
+            <textarea
+              id="field-slaDescription"
+              name="slaDescription"
+              [(ngModel)]="form.slaDescription"
+              rows="3"
+              placeholder="Ej. Disponibilidad 99.9%"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

@@ -8,3 +8,6 @@ export interface ApiDetail {
   authenticationMethod?: string | null;
   slaDescription?: string | null;
 }
+
+/** Body para CREATE (sin componentType) */
+export type ApiDetailRequest = Omit<ApiDetail, 'componentType'>;
