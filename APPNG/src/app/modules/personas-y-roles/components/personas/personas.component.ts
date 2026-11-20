@@ -39,6 +39,8 @@ export class PersonasComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingPersonId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: PersonForm = this.emptyForm();
@@ -75,13 +77,30 @@ export class PersonasComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingPersonId.set(null);
     this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  openEdit(row: PersonRow): void {
+    this.isEditing.set(true);
+    this.editingPersonId.set(row.personId ?? null);
+    this.form = {
+      fullName: row.fullName ?? '',
+      email: row.email ?? '',
+      organization: row.organization ?? '',
+      isActive: (row.isActive === 'N' ? 'N' : 'Y') as ActiveFlag,
+    };
     this.formError.set('');
     this.modalOpen.set(true);
   }
 
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingPersonId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -113,17 +132,46 @@ export class PersonasComponent implements OnInit {
       return;
     }
 
-    const body: PersonRequest = {
+    this.saving.set(true);
+    this.formError.set('');
+
+    if (this.isEditing()) {
+      const id = this.editingPersonId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar la persona a actualizar.');
+        return;
+      }
+
+      const updateBody: PersonRequest = {
+        fullName,
+        email,
+        organization: organization || null,
+        isActive: this.form.isActive,
+      };
+
+      this.peopleService.updatePerson(id, updateBody).subscribe({
+        next: () => {
+          this.toastService.success('Persona actualizada correctamente');
+          this.closeModal();
+          this.loadPeople();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createBody: PersonRequest = {
       fullName,
       email,
       isActive: this.form.isActive,
     };
-    if (organization) body.organization = organization;
+    if (organization) createBody.organization = organization;
 
-    this.saving.set(true);
-    this.formError.set('');
-
-    this.peopleService.createPerson(body).subscribe({
+    this.peopleService.createPerson(createBody).subscribe({
       next: () => {
         this.toastService.success('Persona creada correctamente');
         this.closeModal();
@@ -167,7 +215,10 @@ export class PersonasComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -175,10 +226,11 @@ export class PersonasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'La persona no existe o ya fue eliminada.';
     if (error.status === 409) return 'Ya existe una persona con ese correo.';
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar las personas.'
-      : 'No fue posible crear la persona.';
+    if (action === 'list') return 'No fue posible cargar las personas.';
+    if (action === 'update') return 'No fue posible actualizar la persona.';
+    return 'No fue posible crear la persona.';
   }
 }

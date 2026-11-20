@@ -17,4 +17,8 @@ export class PeopleService {
   createPerson(body: PersonRequest): Observable<Person> {
     return this.http.post<Person>(`${this.baseUrl}/catalogos/people`, body);
   }
+
+  updatePerson(id: number, body: PersonRequest): Observable<Person> {
+    return this.http.put<Person>(`${this.baseUrl}/catalogos/people/${id}`, body);
+  }
 }

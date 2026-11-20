@@ -42,12 +42,13 @@
           <th>Correo</th>
           <th>Organización</th>
           <th>Activo</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="5">
+            <td class="empty-cell" colspan="6">
               <strong>Cargando personas...</strong>
             </td>
           </tr>
@@ -59,13 +60,27 @@
               <td [title]="row.email || ''">{{ row.email || '—' }}</td>
               <td [title]="row.organization || ''">{{ row.organization || '—' }}</td>
               <td [title]="labelForActiveFlag(row.isActive)">{{ labelForActiveFlag(row.isActive) }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + row.fullName"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="5">
+              <td class="empty-cell" colspan="6">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
-                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'No hay personas registradas todavía.' }}</small>
+                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea la primera persona para comenzar.' }}</small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -80,12 +95,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear persona">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar persona' : 'Crear persona'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">person</span>
-          <h2>Nueva persona</h2>
-          <p>Completa los campos para registrarla en el catálogo.</p>
+          <h2>{{ isEditing() ? 'Editar persona' : 'Nueva persona' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos de la persona seleccionada.'
+                : 'Completa los campos para registrarla en el catálogo.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -150,7 +176,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>
