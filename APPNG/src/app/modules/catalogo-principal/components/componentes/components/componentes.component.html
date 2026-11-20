@@ -41,26 +41,34 @@
         </tr>
       </thead>
       <tbody>
-        @for (row of filteredRows; track row._rowId) {
-          <tr>
-            <td [title]="row.componentId">{{ row.componentId || '—' }}</td>
-            <td [title]="labelForComponentType(row.componentType)">{{ labelForComponentType(row.componentType) }}</td>
-            <td [title]="row.name">{{ row.name || '—' }}</td>
-            <td [title]="row.acronym || ''">{{ row.acronym || '—' }}</td>
-            <td [title]="row.description || ''">{{ row.description || '—' }}</td>
-            <td [title]="labelForActiveFlag(row.isActive)">{{ labelForActiveFlag(row.isActive) }}</td>
-          </tr>
-        } @empty {
+        @if (loading) {
           <tr>
             <td class="empty-cell" colspan="6">
-              <span class="empty-illustration">▤</span>
-              <strong>{{ searchTerm ? 'No encontramos resultados' : 'Aún no hay registros' }}</strong>
-              <small>{{ searchTerm ? 'Prueba con otro término de búsqueda.' : 'Crea el primer componente para comenzar.' }}</small>
-              @if (!searchTerm) {
-                <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
-              }
+              <strong>Cargando componentes...</strong>
             </td>
           </tr>
+        } @else {
+          @for (row of filteredRows; track row._rowId) {
+            <tr>
+              <td [title]="row.componentId">{{ row.componentId || '—' }}</td>
+              <td [title]="labelForComponentType(row.componentType)">{{ labelForComponentType(row.componentType) }}</td>
+              <td [title]="row.name">{{ row.name || '—' }}</td>
+              <td [title]="row.acronym || ''">{{ row.acronym || '—' }}</td>
+              <td [title]="row.description || ''">{{ row.description || '—' }}</td>
+              <td [title]="labelForActiveFlag(row.isActive)">{{ labelForActiveFlag(row.isActive) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="6">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm ? 'No encontramos resultados' : 'Aún no hay registros' }}</strong>
+                <small>{{ searchTerm ? 'Prueba con otro término de búsqueda.' : 'Crea el primer componente para comenzar.' }}</small>
+                @if (!searchTerm) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
+              </td>
+            </tr>
+          }
         }
       </tbody>
     </table>

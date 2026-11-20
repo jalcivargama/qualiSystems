@@ -3,7 +3,6 @@ import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
-import { CatalogStoreService, MockRecord } from '../../../../../core/catalog-store.service';
 import { ToastService } from '../../../../../core/toast.service';
 import { ComponentsService } from '../components.service';
 import {
@@ -11,9 +10,9 @@ import {
   ComponentType,
   CreateNewComponentDto,
 } from '../models/create.component.dto';
-import { CreateComponentResponseDto } from '../models/create.component.response.dto';
+import { CatalogComponent } from '../models/catalog.component';
 
-type ComponentRow = CreateComponentResponseDto & { _rowId: string };
+type ComponentRow = CatalogComponent & { _rowId: string };
 
 type CreateForm = {
   componentType: ComponentType;
@@ -30,7 +29,6 @@ type CreateForm = {
   styleUrl: './componentes.component.css',
 })
 export class ComponentesComponent implements OnInit {
-  private readonly store = inject(CatalogStoreService);
   private readonly componentsService = inject(ComponentsService);
   private readonly toastService = inject(ToastService);
 
@@ -57,6 +55,7 @@ export class ComponentesComponent implements OnInit {
   ) as Record<ActiveFlag, string>;
 
   rows: ComponentRow[] = [];
+  loading = false;
   searchTerm = '';
   modalOpen = false;
   saving = false;
@@ -64,7 +63,7 @@ export class ComponentesComponent implements OnInit {
   form: CreateForm = this.emptyForm();
 
   ngOnInit(): void {
-    this.rows = this.store.getRecords('catalog_component').map((row) => this.fromMock(row));
+    this.loadComponents();
   }
 
   get filteredRows(): ComponentRow[] {
@@ -137,22 +136,38 @@ export class ComponentesComponent implements OnInit {
     this.formError = '';
 
     this.componentsService.createNewComponent(dto).subscribe({
-      next: (created) => {
-        this.rows = [
-          {
-            ...created,
-            _rowId: `api-${created.componentId}`,
-          },
-          ...this.rows,
-        ];
+      next: () => {
         this.toastService.success('Componente creado correctamente');
         this.closeModal();
+        this.loadComponents();
       },
       error: (error: HttpErrorResponse) => {
         this.saving = false;
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
       },
     });
+  }
+
+  private loadComponents(): void {
+    this.loading = true;
+    this.componentsService.getComponents().subscribe({
+      next: (components) => {
+        this.rows = components.map((component) => this.toRow(component));
+        this.loading = false;
+      },
+      error: (error: HttpErrorResponse) => {
+        this.loading = false;
+        this.rows = [];
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
+      },
+    });
+  }
+
+  private toRow(component: CatalogComponent): ComponentRow {
+    return {
+      ...component,
+      _rowId: `api-${component.componentId ?? component.name}`,
+    };
   }
 
   private emptyForm(): CreateForm {
@@ -165,28 +180,18 @@ export class ComponentesComponent implements OnInit {
     };
   }
 
-  private fromMock(row: MockRecord): ComponentRow {
-    return {
-      _rowId: row._mockId,
-      componentId: Number(row['component_id'] ?? 0),
-      componentType: String(row['component_type'] ?? ''),
-      name: String(row['name'] ?? ''),
-      acronym: row['acronym'] != null ? String(row['acronym']) : null,
-      description: row['description'] != null ? String(row['description']) : null,
-      isActive: String(row['is_active'] ?? 'Y'),
-      createdAt: String(row['created_at'] ?? ''),
-      updatedAt: String(row['updated_at'] ?? ''),
-    };
-  }
-
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
     }
     if (typeof body === 'string' && body.trim()) return body;
+    if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
+    if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 409) return 'Ya existe un componente con ese nombre y tipo.';
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return 'No fue posible crear el componente.';
+    return action === 'list'
+      ? 'No fue posible cargar los componentes.'
+      : 'No fue posible crear el componente.';
   }
 }
