@@ -1,2 +1,237 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/system_responsibility">Catálogos</a><span>/</span>
+      <strong>Responsables de sistemas</strong>
+    </div>
+    <h1>Responsables de sistemas</h1>
+    <p>Asignaciones de personas y roles a los sistemas.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Responsables</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Sistema</th>
+          <th>Persona</th>
+          <th>Rol</th>
+          <th>Notas</th>
+          <th class="actions-header">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="5">
+              <strong>Cargando responsables...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="componentName(row.componentId)">{{ componentName(row.componentId) }}</td>
+              <td [title]="personName(row.personId)">{{ personName(row.personId) }}</td>
+              <td [title]="roleName(row.roleId)">{{ roleName(row.roleId) }}</td>
+              <td [title]="row.notes || ''">{{ row.notes || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="
+                    'Editar ' +
+                    componentName(row.componentId) +
+                    ' / ' +
+                    personName(row.personId) +
+                    ' / ' +
+                    roleName(row.roleId)
+                  "
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="5">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Crea la primera asignación de responsable para comenzar.'
+                  }}
+                </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar responsabilidad de sistema' : 'Crear responsabilidad de sistema'"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">system_responsibility</span>
+          <h2>{{ isEditing() ? 'Editar responsabilidad' : 'Nueva responsabilidad' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza las notas. La clave sistema/persona/rol no se puede cambiar.'
+                : 'Asigna una persona y un rol a un sistema.'
+            }}
+          </p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-componentId">Sistema <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+              [disabled]="isEditing()"
+            >
+              <option [ngValue]="null">Selecciona un sistema</option>
+              @for (component of systemComponents(); track component.componentId) {
+                <option [ngValue]="+component.componentId!">{{ component.name }}</option>
+              }
+            </select>
+            @if (!isEditing()) {
+              <small class="field-hint">Solo componentes tipo SISTEMA.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-personId">Persona <i>*</i></label>
+            <select
+              id="field-personId"
+              name="personId"
+              [ngModel]="form.personId"
+              (ngModelChange)="onPersonIdChange($event)"
+              required
+              [disabled]="isEditing()"
+            >
+              <option [ngValue]="null">Selecciona una persona</option>
+              @for (person of people(); track person.personId) {
+                <option [ngValue]="+person.personId!">{{ personOptionLabel(person) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-roleId">Rol <i>*</i></label>
+            <select
+              id="field-roleId"
+              name="roleId"
+              [ngModel]="form.roleId"
+              (ngModelChange)="onRoleIdChange($event)"
+              required
+              [disabled]="isEditing() || form.componentId == null || form.personId == null"
+            >
+              <option [ngValue]="null">Selecciona un rol</option>
+              @for (role of availableRoles(); track role.roleId) {
+                <option [ngValue]="+role.roleId!">{{ roleOptionLabel(role) }}</option>
+              }
+            </select>
+            @if (!isEditing()) {
+              <small class="field-hint">Excluye roles ya asignados a esa persona en el sistema.</small>
+            }
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-notes">Notas</label>
+            <textarea
+              id="field-notes"
+              name="notes"
+              [(ngModel)]="form.notes"
+              rows="3"
+              placeholder="Notas sobre la responsabilidad"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting() || !canSubmit">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

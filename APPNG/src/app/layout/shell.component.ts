@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { AuthService } from '../core/auth.service';
+import { AuthService } from '../pages/login/auth.service';
 import { CatalogDefinition, CatalogStoreService } from '../core/catalog-store.service';
 
 @Component({

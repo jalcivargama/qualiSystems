@@ -1,2 +1,233 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/database_detail">Catálogos</a><span>/</span>
+      <strong>Bases de datos</strong>
+    </div>
+    <h1>Bases de datos</h1>
+    <p>Motores, instancias y esquemas asociados al catálogo.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Bases de datos</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Base de datos</th>
+          <th>Motor</th>
+          <th>Versión</th>
+          <th>Instancia</th>
+          <th>Esquema</th>
+          <th class="actions-header">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="6">
+              <strong>Cargando bases de datos...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="componentName(row.componentId)">{{ componentName(row.componentId) }}</td>
+              <td [title]="row.engine || ''">{{ row.engine || '—' }}</td>
+              <td [title]="row.engineVersion || ''">{{ row.engineVersion || '—' }}</td>
+              <td [title]="row.instanceName || ''">{{ row.instanceName || '—' }}</td>
+              <td [title]="row.schemaName || ''">{{ row.schemaName || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + componentName(row.componentId)"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="6">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Crea el primer detalle de base de datos para comenzar.'
+                  }}
+                </small>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar detalle de base de datos' : 'Crear detalle de base de datos'"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">database_detail</span>
+          <h2>{{ isEditing() ? 'Editar detalle de base de datos' : 'Nuevo detalle de base de datos' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos de la base de datos seleccionada.'
+                : 'Selecciona un componente BASE DE DATOS y completa sus datos.'
+            }}
+          </p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-componentId">Componente BASE DE DATOS <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              <option
+                *ngFor="let component of availableDatabaseComponents()"
+                [ngValue]="+component.componentId!"
+              >
+                {{ component.name }}
+              </option>
+            </select>
+            <small class="field-hint">Solo componentes tipo BASE DE DATOS activos y sin detalle asociado.</small>
+            @if (availableDatabaseComponents().length === 0) {
+              <small class="field-hint">No hay componentes BASE DE DATOS activos disponibles para asociar.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-engine">Motor <i>*</i></label>
+            <input
+              id="field-engine"
+              name="engine"
+              type="text"
+              [(ngModel)]="form.engine"
+              maxlength="100"
+              required
+              placeholder="Ej. Oracle"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-engineVersion">Versión</label>
+            <input
+              id="field-engineVersion"
+              name="engineVersion"
+              type="text"
+              [(ngModel)]="form.engineVersion"
+              maxlength="100"
+              placeholder="Ej. 19c"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-instanceName">Instancia</label>
+            <input
+              id="field-instanceName"
+              name="instanceName"
+              type="text"
+              [(ngModel)]="form.instanceName"
+              maxlength="200"
+              placeholder="Ej. PRODDB"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-schemaName">Esquema</label>
+            <input
+              id="field-schemaName"
+              name="schemaName"
+              type="text"
+              [(ngModel)]="form.schemaName"
+              maxlength="200"
+              placeholder="Ej. CATSYS"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting() || !canSubmit">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

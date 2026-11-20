@@ -1,14 +1,14 @@
 import { Routes } from '@angular/router';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService } from './core/auth.service';
+import { AuthService } from './pages/login/auth.service';
 import { ShellComponent } from './layout/shell.component';
 import { LoginComponent } from './pages/login/login.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { ExploradorDependenciasComponent } from './pages/explorador-dependencias/explorador-dependencias.component';
-import { ComponentesComponent } from './modules/catalogo-principal/components/componentes/componentes.component';
+import { ComponentesComponent } from './modules/catalogo-principal/components/componentes/components/componentes.component';
 import { SistemasComponent } from './modules/catalogo-principal/components/sistemas/sistemas.component';
-import { ApisComponent } from './modules/catalogo-principal/components/apis/apis.component';
+import { ApisComponent } from './modules/catalogo-principal/components/apis/components/apis.component';
 import { BasesDeDatosComponent } from './modules/catalogo-principal/components/bases-de-datos/bases-de-datos.component';
 import { InfraestructuraComponent } from './modules/catalogo-principal/components/infraestructura/infraestructura.component';
 import { DesplieguesComponent } from './modules/operacion/components/despliegues/despliegues.component';

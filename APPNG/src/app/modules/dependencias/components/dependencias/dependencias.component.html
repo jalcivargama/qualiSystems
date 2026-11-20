@@ -1,2 +1,254 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/dependency">Catálogos</a><span>/</span>
+      <strong>Dependencias</strong>
+    </div>
+    <h1>Dependencias</h1>
+    <p>Relaciones dirigidas entre el componente origen y destino.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Dependencias</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Origen</th>
+          <th>Destino</th>
+          <th>Tipo</th>
+          <th>Alcance</th>
+          <th>Criticidad</th>
+          <th>Descripción</th>
+          <th>Creado el</th>
+          <th class="actions-header">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="9">
+              <strong>Cargando dependencias...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="row.dependencyId">{{ row.dependencyId || '—' }}</td>
+              <td [title]="componentName(row.originComponentId)">{{ componentName(row.originComponentId) }}</td>
+              <td [title]="componentName(row.targetComponentId)">{{ componentName(row.targetComponentId) }}</td>
+              <td [title]="dependencyTypeName(row.dependencyTypeId)">{{ dependencyTypeName(row.dependencyTypeId) }}</td>
+              <td [title]="labelForScope(row.dependencyScope)">{{ labelForScope(row.dependencyScope) }}</td>
+              <td [title]="labelForCriticality(row.criticality)">{{ labelForCriticality(row.criticality) }}</td>
+              <td [title]="row.description || ''">{{ row.description || '—' }}</td>
+              <td [title]="row.createdAt || ''">{{ row.createdAt || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar dependencia ' + (row.dependencyId || '')"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="9">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Crea la primera dependencia para comenzar.'
+                  }}
+                </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar dependencia' : 'Crear dependencia'"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">dependency</span>
+          <h2>{{ isEditing() ? 'Editar dependencia' : 'Nueva dependencia' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza el origen, destino, tipo y alcance de la relación.'
+                : 'Define el origen, destino, tipo y alcance de la relación.'
+            }}
+          </p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-originComponentId">Componente origen <i>*</i></label>
+            <select
+              id="field-originComponentId"
+              name="originComponentId"
+              [ngModel]="form.originComponentId"
+              (ngModelChange)="onOriginComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              @for (component of components(); track component.componentId) {
+                <option [ngValue]="+component.componentId!">{{ componentOptionLabel(component) }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-targetComponentId">Componente destino <i>*</i></label>
+            <select
+              id="field-targetComponentId"
+              name="targetComponentId"
+              [ngModel]="form.targetComponentId"
+              (ngModelChange)="onTargetComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              @for (component of availableTargetComponents(); track component.componentId) {
+                <option [ngValue]="+component.componentId!">{{ componentOptionLabel(component) }}</option>
+              }
+            </select>
+            <small class="field-hint">Debe ser distinto del componente origen.</small>
+          </div>
+
+          <div class="form-field">
+            <label for="field-dependencyTypeId">Tipo de dependencia <i>*</i></label>
+            <select
+              id="field-dependencyTypeId"
+              name="dependencyTypeId"
+              [ngModel]="form.dependencyTypeId"
+              (ngModelChange)="onDependencyTypeIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un tipo</option>
+              @for (type of dependencyTypes(); track type.dependencyTypeId) {
+                <option [ngValue]="+type.dependencyTypeId!">{{ type.typeName }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-dependencyScope">Alcance <i>*</i></label>
+            <select
+              id="field-dependencyScope"
+              name="dependencyScope"
+              [(ngModel)]="form.dependencyScope"
+              required
+            >
+              @for (option of scopeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-criticality">Criticidad</label>
+            <select id="field-criticality" name="criticality" [(ngModel)]="form.criticality">
+              <option value="">Sin definir</option>
+              @for (option of criticalityOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-description">Descripción</label>
+            <textarea
+              id="field-description"
+              name="description"
+              [(ngModel)]="form.description"
+              rows="3"
+              placeholder="Describe la relación entre origen y destino"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting() || !canSubmit">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

@@ -1,0 +1,214 @@
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/catalog_component">Catálogos</a><span>/</span>
+      <strong>Componentes</strong>
+    </div>
+    <h1>Componentes</h1>
+    <p>Sistemas, APIs, bases de datos, infraestructura y servicios conectados.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+</div>
+
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>catalog_component</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Tipo</th>
+          <th>Nombre</th>
+          <th>Acrónimo</th>
+          <th>Descripción</th>
+          <th>Activo</th>
+          <th class="actions-header">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="7">
+              <strong>Cargando componentes...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="row.componentId">{{ row.componentId || '—' }}</td>
+              <td [title]="labelForComponentType(row.componentType)">{{ labelForComponentType(row.componentType) }}</td>
+              <td [title]="row.name">{{ row.name || '—' }}</td>
+              <td [title]="row.acronym || ''">{{ row.acronym || '—' }}</td>
+              <td [title]="row.description || ''">{{ row.description || '—' }}</td>
+              <td [title]="labelForActiveFlag(row.isActive)">{{ labelForActiveFlag(row.isActive) }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + row.name"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="7">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Aún no hay registros' }}</strong>
+                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea el primer componente para comenzar.' }}</small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar componente' : 'Crear componente'"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">catalog_component</span>
+          <h2>{{ isEditing() ? 'Editar componente' : 'Nuevo componente' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos del componente seleccionado.'
+                : 'Completa los campos para registrarlo en el catálogo.'
+            }}
+          </p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-componentType">Tipo <i>*</i></label>
+            <select id="field-componentType" name="componentType" [(ngModel)]="form.componentType" required>
+              @for (type of componentTypeOptions; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-isActive">Activo <i>*</i></label>
+            <select id="field-isActive" name="isActive" [(ngModel)]="form.isActive" required>
+              @for (flag of activeFlagOptions; track flag.value) {
+                <option [value]="flag.value">{{ flag.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-name">Nombre <i>*</i></label>
+            <input
+              id="field-name"
+              name="name"
+              type="text"
+              [(ngModel)]="form.name"
+              required
+              maxlength="200"
+              placeholder="Ingresa nombre"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-acronym">Acrónimo</label>
+            <input
+              id="field-acronym"
+              name="acronym"
+              type="text"
+              [(ngModel)]="form.acronym"
+              maxlength="50"
+              placeholder="Ingresa acrónimo"
+            />
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-description">Descripción</label>
+            <textarea
+              id="field-description"
+              name="description"
+              [(ngModel)]="form.description"
+              rows="3"
+              placeholder="Ingresa descripción"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting()">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

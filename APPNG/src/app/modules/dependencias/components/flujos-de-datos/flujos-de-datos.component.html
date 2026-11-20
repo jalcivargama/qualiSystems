@@ -1,2 +1,244 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/data_flow">Catálogos</a><span>/</span>
+      <strong>Flujos de datos</strong>
+    </div>
+    <h1>Flujos de datos</h1>
+    <p>Datos intercambiados, periodicidad, sensibilidad y formato.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Flujos de datos</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Dependencia</th>
+          <th>Dato intercambiado</th>
+          <th>Periodicidad</th>
+          <th>Sensibilidad</th>
+          <th>Formato</th>
+          <th>Descripción</th>
+          <th class="actions-header">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="8">
+              <strong>Cargando flujos de datos...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="row.dataFlowId">{{ row.dataFlowId || '—' }}</td>
+              <td [title]="dependencyLabel(row.dependencyId)">{{ dependencyLabel(row.dependencyId) }}</td>
+              <td [title]="row.dataName || ''">{{ row.dataName || '—' }}</td>
+              <td [title]="row.periodicity || ''">{{ row.periodicity || '—' }}</td>
+              <td [title]="labelForSensitivity(row.sensitivity)">{{ labelForSensitivity(row.sensitivity) }}</td>
+              <td [title]="row.dataFormat || ''">{{ row.dataFormat || '—' }}</td>
+              <td [title]="row.description || ''">{{ row.description || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + (row.dataName || row.dataFlowId)"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="8">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Crea el primer flujo de datos para comenzar.'
+                  }}
+                </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar flujo de datos' : 'Crear flujo de datos'"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">data_flow</span>
+          <h2>{{ isEditing() ? 'Editar flujo de datos' : 'Nuevo flujo de datos' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza la dependencia y los datos del flujo.'
+                : 'Asocia el flujo a una dependencia y describe el dato intercambiado.'
+            }}
+          </p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-dependencyId">Dependencia <i>*</i></label>
+            <select
+              id="field-dependencyId"
+              name="dependencyId"
+              [ngModel]="form.dependencyId"
+              (ngModelChange)="onDependencyIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona una dependencia</option>
+              @for (dependency of dependencies(); track dependency.dependencyId) {
+                <option [ngValue]="+dependency.dependencyId!">
+                  {{ dependencyLabel(dependency.dependencyId) }}
+                </option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-dataName">Dato intercambiado <i>*</i></label>
+            <input
+              id="field-dataName"
+              name="dataName"
+              type="text"
+              [(ngModel)]="form.dataName"
+              required
+              maxlength="200"
+              placeholder="Ej. Movimientos de inventario"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-periodicity">Periodicidad</label>
+            <input
+              id="field-periodicity"
+              name="periodicity"
+              type="text"
+              [(ngModel)]="form.periodicity"
+              maxlength="100"
+              placeholder="Ej. Diaria"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-sensitivity">Sensibilidad</label>
+            <select id="field-sensitivity" name="sensitivity" [(ngModel)]="form.sensitivity">
+              <option value="">Sin definir</option>
+              @for (option of sensitivityOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-dataFormat">Formato</label>
+            <input
+              id="field-dataFormat"
+              name="dataFormat"
+              type="text"
+              [(ngModel)]="form.dataFormat"
+              maxlength="100"
+              placeholder="Ej. JSON"
+            />
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-description">Descripción</label>
+            <textarea
+              id="field-description"
+              name="description"
+              [(ngModel)]="form.description"
+              rows="3"
+              placeholder="Describe el flujo de datos"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting() || !canSubmit">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

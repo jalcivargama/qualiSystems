@@ -1,2 +1,183 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/technology">Catálogos</a><span>/</span>
+      <strong>Tecnologías</strong>
+    </div>
+    <h1>Tecnologías</h1>
+    <p>Catálogo de lenguajes, frameworks, mensajería y herramientas.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Tecnologías</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Categoría</th>
+          <th>Nombre</th>
+          <th class="actions-header">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="4">
+              <strong>Cargando tecnologías...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="row.technologyId">{{ row.technologyId || '—' }}</td>
+              <td [title]="labelForCategory(row.category)">{{ labelForCategory(row.category) }}</td>
+              <td [title]="row.name || ''">{{ row.name || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + row.name"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="4">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Crea la primera tecnología para comenzar.'
+                  }}
+                </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar tecnología' : 'Crear tecnología'"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">technology</span>
+          <h2>{{ isEditing() ? 'Editar tecnología' : 'Nueva tecnología' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza la categoría y el nombre de la tecnología.'
+                : 'Completa la categoría y el nombre para registrarla en el catálogo.'
+            }}
+          </p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-category">Categoría <i>*</i></label>
+            <select id="field-category" name="category" [(ngModel)]="form.category" required>
+              <option value="">Selecciona una categoría</option>
+              @for (option of categoryOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-name">Nombre <i>*</i></label>
+            <input
+              id="field-name"
+              name="name"
+              type="text"
+              [(ngModel)]="form.name"
+              required
+              maxlength="200"
+              placeholder="Ej. Spring Boot"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting() || !canSubmit">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

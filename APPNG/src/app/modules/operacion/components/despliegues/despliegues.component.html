@@ -1,2 +1,209 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/system_deployment">Catálogos</a><span>/</span>
+      <strong>Despliegues</strong>
+    </div>
+    <h1>Despliegues</h1>
+    <p>URLs de los sistemas según su ambiente.</p>
+  </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Despliegues</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sistema</th>
+          <th>Ambiente</th>
+          <th>URL</th>
+          <th class="actions-header">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="5">
+              <strong>Cargando despliegues...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="row.deploymentId">{{ row.deploymentId || '—' }}</td>
+              <td [title]="componentName(row.componentId)">{{ componentName(row.componentId) }}</td>
+              <td [title]="labelForEnvironment(row.environment)">
+                {{ labelForEnvironment(row.environment) }}
+              </td>
+              <td [title]="row.url || ''">{{ row.url || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar despliegue ' + (row.deploymentId || '')"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="5">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Crea el primer despliegue para comenzar.'
+                  }}
+                </small>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar despliegue' : 'Crear despliegue'"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">system_deployment</span>
+          <h2>{{ isEditing() ? 'Editar despliegue' : 'Nuevo despliegue' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza el sistema, ambiente o URL del despliegue.'
+                : 'Selecciona un sistema con detalle y define su ambiente.'
+            }}
+          </p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-componentId">Sistema <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un sistema</option>
+              <option
+                *ngFor="let system of availableSystems()"
+                [ngValue]="system.componentId"
+              >
+                {{ system.name }}
+              </option>
+            </select>
+            <small class="field-hint">Solo sistemas con detalle de sistema registrado.</small>
+            @if (availableSystems().length === 0) {
+              <small class="field-hint">No hay system-details disponibles para asociar.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-environment">Ambiente <i>*</i></label>
+            <select id="field-environment" name="environment" [(ngModel)]="form.environment" required>
+              <option value="">Selecciona un ambiente</option>
+              @for (option of availableEnvironments(); track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            @if (selectedComponentId() != null && availableEnvironments().length === 0) {
+              <small class="field-hint">Este sistema ya tiene despliegue en todos los ambientes.</small>
+            }
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-url">URL</label>
+            <input
+              id="field-url"
+              name="url"
+              type="url"
+              [(ngModel)]="form.url"
+              maxlength="2000"
+              placeholder="https://inventario.ejemplo.com"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions" [class.has-delete]="isEditing()">
+          @if (isEditing()) {
+            <button
+              type="button"
+              class="danger-button"
+              (click)="deleteCurrent()"
+              [disabled]="saving() || deleting()"
+            >
+              {{ deleting() ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          }
+          <div class="modal-actions-right">
+            <button
+              type="button"
+              class="secondary-button"
+              (click)="closeModal()"
+              [disabled]="saving() || deleting()"
+            >
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || deleting() || !canSubmit">
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}
