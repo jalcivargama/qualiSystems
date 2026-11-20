@@ -1,6 +1,6 @@
 export type ActiveFlag = 'Y' | 'N';
 
-/** Entidad que regresa la API (GET /catalogos/component-technologies) */
+/** Entidad que regresa la API */
 export interface ComponentTechnology {
   componentId: number;
   technologyId: number;

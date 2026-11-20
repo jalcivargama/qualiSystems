@@ -13,4 +13,11 @@ export class ComponentTechnologiesService {
   getAllComponentTechnologies(): Observable<ComponentTechnology[]> {
     return this.http.get<ComponentTechnology[]>(`${this.baseUrl}/catalogos/component-technologies`);
   }
+
+  createComponentTechnology(body: ComponentTechnology): Observable<ComponentTechnology> {
+    return this.http.post<ComponentTechnology>(
+      `${this.baseUrl}/catalogos/component-technologies`,
+      body,
+    );
+  }
 }

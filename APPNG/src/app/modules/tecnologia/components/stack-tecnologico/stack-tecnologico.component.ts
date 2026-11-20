@@ -5,13 +5,23 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
-import { CatalogComponent } from '../../../catalogo-principal/components/componentes/models/component.model';
+import {
+  CatalogComponent,
+  ComponentType,
+} from '../../../catalogo-principal/components/componentes/models/component.model';
 import { TechnologiesService } from '../tecnologias/technologies.service';
-import { Technology } from '../tecnologias/models/technology.model';
+import { Technology, TechnologyCategory } from '../tecnologias/models/technology.model';
 import { ComponentTechnologiesService } from './component-technologies.service';
 import { ActiveFlag, ComponentTechnology } from './models/component-technology.model';
 
 type ComponentTechnologyRow = ComponentTechnology & { _rowId: string };
+
+type ComponentTechnologyForm = {
+  componentId: number | null;
+  technologyId: number | null;
+  version: string;
+  isPrimary: ActiveFlag;
+};
 
 @Component({
   selector: 'app-stack-tecnologico',
@@ -25,9 +35,35 @@ export class StackTecnologicoComponent implements OnInit {
   private readonly technologiesService = inject(TechnologiesService);
   private readonly toastService = inject(ToastService);
 
-  private readonly primaryLabels: Record<ActiveFlag, string> = {
-    Y: 'SÍ',
-    N: 'NO',
+  readonly primaryOptions: { value: ActiveFlag; label: string }[] = [
+    { value: 'Y', label: 'SÍ' },
+    { value: 'N', label: 'NO' },
+  ];
+
+  private readonly primaryLabels = Object.fromEntries(
+    this.primaryOptions.map((option) => [option.value, option.label]),
+  ) as Record<ActiveFlag, string>;
+
+  private readonly componentTypeLabels: Record<ComponentType, string> = {
+    SYSTEM: 'SISTEMA',
+    API: 'API',
+    DATABASE: 'BASE DE DATOS',
+    INFRASTRUCTURE: 'INFRAESTRUCTURA',
+    EXTERNAL_SERVICE: 'SERVICIO EXTERNO',
+    MESSAGING: 'MENSAJERÍA',
+  };
+
+  private readonly categoryLabels: Record<TechnologyCategory, string> = {
+    LANGUAGE: 'LENGUAJE',
+    FRAMEWORK: 'FRAMEWORK',
+    DATABASE: 'BASE DE DATOS',
+    FRONTEND: 'FRONTEND',
+    BACKEND: 'BACKEND',
+    MESSAGING: 'MENSAJERÍA',
+    CONTAINER: 'CONTENEDOR',
+    ORCHESTRATION: 'ORQUESTACIÓN',
+    MONITORING: 'MONITOREO',
+    OTHER: 'OTRO',
   };
 
   readonly rows = signal<ComponentTechnologyRow[]>([]);
@@ -35,6 +71,11 @@ export class StackTecnologicoComponent implements OnInit {
   readonly technologies = signal<Technology[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  readonly selectedComponentId = signal<number | null>(null);
+  form: ComponentTechnologyForm = this.emptyForm();
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -50,10 +91,41 @@ export class StackTecnologicoComponent implements OnInit {
     );
   });
 
+  readonly availableTechnologies = computed(() => {
+    const componentId = this.selectedComponentId();
+    const usedTechnologyIds = new Set(
+      this.rows()
+        .filter((row) => Number(row.componentId) === Number(componentId))
+        .map((row) => Number(row.technologyId)),
+    );
+    return this.technologies().filter((technology) => {
+      const id = Number(technology.technologyId);
+      return Number.isFinite(id) && !usedTechnologyIds.has(id);
+    });
+  });
+
   ngOnInit(): void {
     this.loadComponentTechnologies();
     this.loadComponents();
     this.loadTechnologies();
+  }
+
+  get canSubmit(): boolean {
+    return (
+      this.form.componentId != null &&
+      this.form.technologyId != null &&
+      !!this.form.isPrimary
+    );
+  }
+
+  onComponentIdChange(value: number | string | null): void {
+    this.form.componentId = this.toId(value);
+    this.selectedComponentId.set(this.form.componentId);
+    this.form.technologyId = null;
+  }
+
+  onTechnologyIdChange(value: number | string | null): void {
+    this.form.technologyId = this.toId(value);
   }
 
   componentName(componentId: number | null | undefined): string {
@@ -72,6 +144,21 @@ export class StackTecnologicoComponent implements OnInit {
     return match?.name?.trim() || String(technologyId);
   }
 
+  componentOptionLabel(component: CatalogComponent): string {
+    const name = component.name?.trim() || String(component.componentId ?? '—');
+    const typeLabel =
+      this.componentTypeLabels[component.componentType as ComponentType] ??
+      component.componentType;
+    return `${name} - ${typeLabel}`;
+  }
+
+  technologyOptionLabel(technology: Technology): string {
+    const name = technology.name?.trim() || String(technology.technologyId ?? '—');
+    const categoryLabel =
+      this.categoryLabels[technology.category as TechnologyCategory] ?? technology.category;
+    return `${name} - ${categoryLabel}`;
+  }
+
   labelForPrimary(value: string | null | undefined): string {
     if (!value) return '—';
     return this.primaryLabels[value as ActiveFlag] ?? value;
@@ -79,6 +166,62 @@ export class StackTecnologicoComponent implements OnInit {
 
   clearSearch(): void {
     this.searchTerm.set('');
+  }
+
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.selectedComponentId.set(null);
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadComponents();
+    this.loadTechnologies();
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.selectedComponentId.set(null);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const componentId = this.toId(this.form.componentId);
+    const technologyId = this.toId(this.form.technologyId);
+    const version = this.form.version.trim();
+
+    if (componentId == null || technologyId == null || !this.form.isPrimary) {
+      this.formError.set('Completa los campos obligatorios.');
+      return;
+    }
+
+    if (version.length > 100) {
+      this.formError.set('La versión no puede superar 100 caracteres.');
+      return;
+    }
+
+    const body: ComponentTechnology = {
+      componentId,
+      technologyId,
+      isPrimary: this.form.isPrimary,
+    };
+    if (version) body.version = version;
+
+    this.saving.set(true);
+    this.formError.set('');
+
+    this.componentTechnologiesService.createComponentTechnology(body).subscribe({
+      next: () => {
+        this.toastService.success('Tecnología de componente creada correctamente');
+        this.closeModal();
+        this.loadComponentTechnologies();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
   }
 
   private loadComponentTechnologies(): void {
@@ -91,7 +234,7 @@ export class StackTecnologicoComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });
   }
@@ -125,7 +268,22 @@ export class StackTecnologicoComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): ComponentTechnologyForm {
+    return {
+      componentId: null,
+      technologyId: null,
+      version: '',
+      isPrimary: 'N',
+    };
+  }
+
+  private toId(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const id = Number(value);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -133,6 +291,12 @@ export class StackTecnologicoComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar el stack tecnológico.';
+    if (error.status === 409) {
+      return 'Conflicto: la relación ya existe o el componente/tecnología no es válido.';
+    }
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    return action === 'list'
+      ? 'No fue posible cargar el stack tecnológico.'
+      : 'No fue posible crear la tecnología de componente.';
   }
 }
