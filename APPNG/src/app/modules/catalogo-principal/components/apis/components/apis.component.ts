@@ -7,7 +7,11 @@ import { ToastService } from '../../../../../core/toast.service';
 import { ComponentsService } from '../../componentes/components.service';
 import { CatalogComponent } from '../../componentes/models/component.model';
 import { ApisService } from '../apis.service';
-import { ApiDetail, ApiDetailRequest } from '../models/api-detail.model';
+import {
+  ApiDetail,
+  ApiDetailRequest,
+  ApiDetailUpdateRequest,
+} from '../models/api-detail.model';
 
 type ApiRow = ApiDetail & { _rowId: string };
 
@@ -38,15 +42,18 @@ export class ApisComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: ApiForm = this.emptyForm();
 
   readonly availableApiComponents = computed(() => {
+    const editingId = this.editingComponentId();
     const usedIds = new Set(
       this.rows()
         .map((row) => Number(row.componentId))
-        .filter((id) => Number.isFinite(id)),
+        .filter((id) => Number.isFinite(id) && id !== editingId),
     );
     return this.components().filter((component) => {
       const type = String(component.componentType ?? '').trim().toUpperCase();
@@ -78,7 +85,8 @@ export class ApisComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return this.resolveComponentId() != null;
+    const componentId = this.resolveComponentId() ?? this.editingComponentId();
+    return componentId != null;
   }
 
   onComponentIdChange(value: number | string | null): void {
@@ -98,14 +106,34 @@ export class ApisComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.form = this.emptyForm();
     this.formError.set('');
     this.modalOpen.set(true);
     this.loadComponents();
   }
 
+  openEdit(row: ApiRow): void {
+    const componentId = this.toComponentId(row.componentId);
+    this.isEditing.set(true);
+    this.editingComponentId.set(componentId);
+    this.form = {
+      componentId,
+      apiVersion: row.apiVersion ?? '',
+      url: row.url ?? '',
+      protocol: row.protocol ?? '',
+      authenticationMethod: row.authenticationMethod ?? '',
+      slaDescription: row.slaDescription ?? '',
+    };
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -113,7 +141,7 @@ export class ApisComponent implements OnInit {
   save(): void {
     if (this.saving() || !this.canSubmit) return;
 
-    const componentId = this.resolveComponentId();
+    const componentId = this.resolveComponentId() ?? this.editingComponentId();
     if (componentId == null) {
       this.formError.set('Selecciona un componente API.');
       return;
@@ -146,14 +174,38 @@ export class ApisComponent implements OnInit {
     this.formError.set('');
     this.form.componentId = componentId;
 
-    const body: ApiDetailRequest = { componentId };
-    if (apiVersion) body.apiVersion = apiVersion;
-    if (url) body.url = url;
-    if (protocol) body.protocol = protocol;
-    if (authenticationMethod) body.authenticationMethod = authenticationMethod;
-    if (slaDescription) body.slaDescription = slaDescription;
+    if (this.isEditing()) {
+      const updateBody: ApiDetailUpdateRequest = {
+        componentId,
+        apiVersion: apiVersion || null,
+        url: url || null,
+        protocol: protocol || null,
+        authenticationMethod: authenticationMethod || null,
+        slaDescription: slaDescription || null,
+      };
 
-    this.apisService.createApiDetail(body).subscribe({
+      this.apisService.updateApiDetail(componentId, updateBody).subscribe({
+        next: () => {
+          this.toastService.success('Detalle de API actualizado correctamente');
+          this.closeModal();
+          this.loadApiDetails();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createBody: ApiDetailRequest = { componentId };
+    if (apiVersion) createBody.apiVersion = apiVersion;
+    if (url) createBody.url = url;
+    if (protocol) createBody.protocol = protocol;
+    if (authenticationMethod) createBody.authenticationMethod = authenticationMethod;
+    if (slaDescription) createBody.slaDescription = slaDescription;
+
+    this.apisService.createApiDetail(createBody).subscribe({
       next: () => {
         this.toastService.success('Detalle de API creado correctamente');
         this.closeModal();
@@ -220,7 +272,10 @@ export class ApisComponent implements OnInit {
     return Number.isFinite(id) ? id : null;
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -228,11 +283,15 @@ export class ApisComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El detalle de API no existe o ya fue eliminado.';
     if (error.status === 409) {
-      return 'Conflicto: el componente ya tiene detalle o no es de tipo API.';
+      return action === 'update'
+        ? 'No se puede actualizar por restricciones relacionadas.'
+        : 'Conflicto: el componente ya tiene detalle o no es de tipo API.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los detalles de API.';
+    if (action === 'update') return 'No fue posible actualizar el detalle de API.';
     return 'No fue posible crear el detalle de API.';
   }
 }

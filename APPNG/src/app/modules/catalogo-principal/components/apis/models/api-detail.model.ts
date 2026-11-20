@@ -11,3 +11,6 @@ export interface ApiDetail {
 
 /** Body para CREATE (sin componentType) */
 export type ApiDetailRequest = Omit<ApiDetail, 'componentType'>;
+
+/** Body para UPDATE (sin componentType) */
+export type ApiDetailUpdateRequest = Omit<ApiDetail, 'componentType'>;

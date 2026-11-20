@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { ApiDetail, ApiDetailRequest } from './models/api-detail.model';
+import {
+  ApiDetail,
+  ApiDetailRequest,
+  ApiDetailUpdateRequest,
+} from './models/api-detail.model';
 
 @Injectable({ providedIn: 'root' })
 export class ApisService {
@@ -16,5 +20,9 @@ export class ApisService {
 
   createApiDetail(body: ApiDetailRequest): Observable<ApiDetail> {
     return this.http.post<ApiDetail>(`${this.baseUrl}/catalogos/api-details`, body);
+  }
+
+  updateApiDetail(id: number, body: ApiDetailUpdateRequest): Observable<ApiDetail> {
+    return this.http.put<ApiDetail>(`${this.baseUrl}/catalogos/api-details/${id}`, body);
   }
 }

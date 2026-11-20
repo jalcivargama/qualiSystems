@@ -43,12 +43,13 @@
           <th>Protocolo</th>
           <th>Autenticación</th>
           <th>Descripción de SLA</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="6">
+            <td class="empty-cell" colspan="7">
               <strong>Cargando APIs...</strong>
             </td>
           </tr>
@@ -61,10 +62,21 @@
               <td [title]="row.protocol || ''">{{ row.protocol || '—' }}</td>
               <td [title]="row.authenticationMethod || ''">{{ row.authenticationMethod || '—' }}</td>
               <td [title]="row.slaDescription || ''">{{ row.slaDescription || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + componentName(row.componentId)"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="6">
+              <td class="empty-cell" colspan="7">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -74,6 +86,9 @@
                       : 'Crea el primer detalle de API para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -88,12 +103,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear detalle de API">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar detalle de API' : 'Crear detalle de API'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">api_detail</span>
-          <h2>Nuevo detalle de API</h2>
-          <p>Selecciona un componente API y completa sus datos.</p>
+          <h2>{{ isEditing() ? 'Editar detalle de API' : 'Nuevo detalle de API' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos de la API seleccionada.'
+                : 'Selecciona un componente API y completa sus datos.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -139,6 +165,9 @@
             <label for="field-protocol">Protocolo</label>
             <select id="field-protocol" name="protocol" [(ngModel)]="form.protocol">
               <option value="">Sin definir</option>
+              @if (form.protocol && !protocolOptions.includes(form.protocol)) {
+                <option [value]="form.protocol">{{ form.protocol }}</option>
+              }
               @for (option of protocolOptions; track option) {
                 <option [value]="option">{{ option }}</option>
               }
@@ -191,7 +220,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>
