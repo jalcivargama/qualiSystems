@@ -21,4 +21,8 @@ export class PeopleService {
   updatePerson(id: number, body: PersonRequest): Observable<Person> {
     return this.http.put<Person>(`${this.baseUrl}/catalogos/people/${id}`, body);
   }
+
+  deletePerson(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/people/${id}`);
+  }
 }

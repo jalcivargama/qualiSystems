@@ -42,6 +42,7 @@ export class PersonasComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingPersonId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: PersonForm = this.emptyForm();
 
@@ -103,10 +104,40 @@ export class PersonasComponent implements OnInit {
     this.editingPersonId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingPersonId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar la persona a eliminar.');
+      return;
+    }
+
+    if (!window.confirm(`¿Eliminar a "${this.form.fullName.trim() || id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.peopleService.deletePerson(id).subscribe({
+      next: () => {
+        this.toastService.success('Persona eliminada correctamente');
+        this.closeModal();
+        this.loadPeople();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const fullName = this.form.fullName.trim();
     const email = this.form.email.trim();
@@ -217,7 +248,7 @@ export class PersonasComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -227,10 +258,15 @@ export class PersonasComponent implements OnInit {
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'La persona no existe o ya fue eliminada.';
-    if (error.status === 409) return 'Ya existe una persona con ese correo.';
+    if (error.status === 409) {
+      return action === 'delete'
+        ? 'No se puede eliminar: la persona tiene registros relacionados.'
+        : 'Ya existe una persona con ese correo.';
+    }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar las personas.';
     if (action === 'update') return 'No fue posible actualizar la persona.';
+    if (action === 'delete') return 'No fue posible eliminar la persona.';
     return 'No fue posible crear la persona.';
   }
 }
