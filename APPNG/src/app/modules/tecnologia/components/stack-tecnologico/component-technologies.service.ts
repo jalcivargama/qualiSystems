@@ -34,4 +34,10 @@ export class ComponentTechnologiesService {
       body,
     );
   }
+
+  deleteComponentTechnology(componentId: number, technologyId: number): Observable<void> {
+    return this.http.delete<void>(
+      `${this.baseUrl}/catalogos/component-technologies/${componentId}/${technologyId}`,
+    );
+  }
 }

@@ -78,6 +78,7 @@ export class StackTecnologicoComponent implements OnInit {
   readonly modalOpen = signal(false);
   readonly isEditing = signal(false);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   readonly selectedComponentId = signal<number | null>(null);
   form: ComponentTechnologyForm = this.emptyForm();
@@ -210,10 +211,42 @@ export class StackTecnologicoComponent implements OnInit {
     this.selectedComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const componentId = this.toId(this.form.componentId);
+    const technologyId = this.toId(this.form.technologyId);
+    if (componentId == null || technologyId == null) {
+      this.toastService.error('No se pudo identificar la relación a eliminar.');
+      return;
+    }
+
+    const label = `${this.componentName(componentId)} / ${this.technologyName(technologyId)}`;
+    if (!window.confirm(`¿Eliminar la tecnología de componente "${label}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.componentTechnologiesService.deleteComponentTechnology(componentId, technologyId).subscribe({
+      next: () => {
+        this.toastService.success('Tecnología de componente eliminada correctamente');
+        this.closeModal();
+        this.loadComponentTechnologies();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const componentId = this.toId(this.form.componentId);
     const technologyId = this.toId(this.form.technologyId);
@@ -335,7 +368,7 @@ export class StackTecnologicoComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -346,11 +379,14 @@ export class StackTecnologicoComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'La relación componente-tecnología no existe o ya fue eliminada.';
     if (error.status === 409) {
-      return 'Conflicto: la relación ya existe o el componente/tecnología no es válido.';
+      return action === 'delete'
+        ? 'No se puede eliminar: la relación tiene dependencias asociadas.'
+        : 'Conflicto: la relación ya existe o el componente/tecnología no es válido.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar el stack tecnológico.';
     if (action === 'update') return 'No fue posible actualizar la tecnología de componente.';
+    if (action === 'delete') return 'No fue posible eliminar la tecnología de componente.';
     return 'No fue posible crear la tecnología de componente.';
   }
 }
