@@ -7,9 +7,21 @@ import { ToastService } from '../../../../core/toast.service';
 import { ComponentsService } from '../componentes/components.service';
 import { CatalogComponent } from '../componentes/models/component.model';
 import { InfrastructureDetailsService } from './infrastructure-details.service';
-import { HostingModel, InfrastructureDetail } from './models/infrastructure-detail.model';
+import {
+  HostingModel,
+  InfrastructureDetail,
+  InfrastructureDetailRequest,
+} from './models/infrastructure-detail.model';
 
 type InfrastructureRow = InfrastructureDetail & { _rowId: string };
+
+type InfrastructureForm = {
+  componentId: number | null;
+  hostname: string;
+  ipAddress: string;
+  operatingSystem: string;
+  hostingModel: HostingModel | '';
+};
 
 @Component({
   selector: 'app-infraestructura',
@@ -22,15 +34,37 @@ export class InfraestructuraComponent implements OnInit {
   private readonly componentsService = inject(ComponentsService);
   private readonly toastService = inject(ToastService);
 
-  private readonly hostingModelLabels: Record<HostingModel, string> = {
-    CLOUD: 'NUBE',
-    ON_PREMISE: 'ON PREMISE',
-  };
+  readonly hostingModelOptions: { value: HostingModel; label: string }[] = [
+    { value: 'CLOUD', label: 'NUBE' },
+    { value: 'ON_PREMISE', label: 'ON PREMISE' },
+  ];
+
+  private readonly hostingModelLabels = Object.fromEntries(
+    this.hostingModelOptions.map((option) => [option.value, option.label]),
+  ) as Record<HostingModel, string>;
 
   readonly rows = signal<InfrastructureRow[]>([]);
   readonly components = signal<CatalogComponent[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly modalOpen = signal(false);
+  readonly saving = signal(false);
+  readonly formError = signal('');
+  form: InfrastructureForm = this.emptyForm();
+
+  readonly availableInfrastructureComponents = computed(() => {
+    const usedIds = new Set(
+      this.rows()
+        .map((row) => Number(row.componentId))
+        .filter((id) => Number.isFinite(id)),
+    );
+    return this.components().filter((component) => {
+      const type = String(component.componentType ?? '').trim().toUpperCase();
+      const active = String(component.isActive ?? '').trim().toUpperCase();
+      const id = Number(component.componentId);
+      return type === 'INFRASTRUCTURE' && active === 'Y' && Number.isFinite(id) && !usedIds.has(id);
+    });
+  });
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
@@ -52,6 +86,14 @@ export class InfraestructuraComponent implements OnInit {
     this.loadComponents();
   }
 
+  get canSubmit(): boolean {
+    return this.resolveComponentId() != null;
+  }
+
+  onComponentIdChange(value: number | string | null): void {
+    this.form.componentId = this.toComponentId(value);
+  }
+
   componentName(componentId: number | null | undefined): string {
     if (componentId == null) return '—';
     const match = this.components().find(
@@ -69,6 +111,69 @@ export class InfraestructuraComponent implements OnInit {
     this.searchTerm.set('');
   }
 
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadComponents();
+  }
+
+  closeModal(): void {
+    this.modalOpen.set(false);
+    this.formError.set('');
+    this.saving.set(false);
+  }
+
+  save(): void {
+    if (this.saving() || !this.canSubmit) return;
+
+    const componentId = this.resolveComponentId();
+    if (componentId == null) {
+      this.formError.set('Selecciona un componente INFRAESTRUCTURA.');
+      return;
+    }
+
+    const hostname = this.form.hostname.trim();
+    const ipAddress = this.form.ipAddress.trim();
+    const operatingSystem = this.form.operatingSystem.trim();
+    const hostingModel = this.form.hostingModel;
+
+    if (hostname.length > 255) {
+      this.formError.set('El hostname no puede superar 255 caracteres.');
+      return;
+    }
+    if (ipAddress.length > 45) {
+      this.formError.set('La dirección IP no puede superar 45 caracteres.');
+      return;
+    }
+    if (operatingSystem.length > 200) {
+      this.formError.set('El sistema operativo no puede superar 200 caracteres.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.formError.set('');
+    this.form.componentId = componentId;
+
+    const body: InfrastructureDetailRequest = { componentId };
+    if (hostname) body.hostname = hostname;
+    if (ipAddress) body.ipAddress = ipAddress;
+    if (operatingSystem) body.operatingSystem = operatingSystem;
+    if (hostingModel) body.hostingModel = hostingModel;
+
+    this.infrastructureDetailsService.createInfrastructureDetail(body).subscribe({
+      next: () => {
+        this.toastService.success('Detalle de infraestructura creado correctamente');
+        this.closeModal();
+        this.loadInfrastructureDetails();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.saving.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'create'));
+      },
+    });
+  }
+
   private loadInfrastructureDetails(): void {
     this.loading.set(true);
     this.infrastructureDetailsService.getAllInfrastructureDetails().subscribe({
@@ -79,7 +184,7 @@ export class InfraestructuraComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
         this.rows.set([]);
-        this.toastService.error(this.resolveErrorMessage(error));
+        this.toastService.error(this.resolveErrorMessage(error, 'list'));
       },
     });
   }
@@ -102,7 +207,27 @@ export class InfraestructuraComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse): string {
+  private emptyForm(): InfrastructureForm {
+    return {
+      componentId: null,
+      hostname: '',
+      ipAddress: '',
+      operatingSystem: '',
+      hostingModel: '',
+    };
+  }
+
+  private resolveComponentId(): number | null {
+    return this.toComponentId(this.form.componentId);
+  }
+
+  private toComponentId(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const id = Number(value);
+    return Number.isFinite(id) ? id : null;
+  }
+
+  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -110,6 +235,11 @@ export class InfraestructuraComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
-    return 'No fue posible cargar los detalles de infraestructura.';
+    if (error.status === 409) {
+      return 'Conflicto: el componente ya tiene detalle o no es de tipo INFRAESTRUCTURA.';
+    }
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    if (action === 'list') return 'No fue posible cargar los detalles de infraestructura.';
+    return 'No fue posible crear el detalle de infraestructura.';
   }
 }

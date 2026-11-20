@@ -8,6 +8,7 @@
     <h1>Infraestructura</h1>
     <p>Hosts, direcciones de red, sistema operativo y alojamiento.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -70,7 +71,7 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'Aún no hay detalles de infraestructura registrados.'
+                      : 'Crea el primer detalle de infraestructura para comenzar.'
                   }}
                 </small>
               </td>
@@ -84,3 +85,111 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Crear detalle de infraestructura"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">infrastructure_detail</span>
+          <h2>Nuevo detalle de infraestructura</h2>
+          <p>Selecciona un componente INFRAESTRUCTURA y completa sus datos.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-componentId">Componente INFRAESTRUCTURA <i>*</i></label>
+            <select
+              id="field-componentId"
+              name="componentId"
+              [ngModel]="form.componentId"
+              (ngModelChange)="onComponentIdChange($event)"
+              required
+            >
+              <option [ngValue]="null">Selecciona un componente</option>
+              <option
+                *ngFor="let component of availableInfrastructureComponents()"
+                [ngValue]="+component.componentId!"
+              >
+                {{ component.name }}
+              </option>
+            </select>
+            <small class="field-hint">Solo componentes tipo INFRAESTRUCTURA activos y sin detalle asociado.</small>
+            @if (availableInfrastructureComponents().length === 0) {
+              <small class="field-hint">No hay componentes INFRAESTRUCTURA activos disponibles para asociar.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-hostname">Hostname</label>
+            <input
+              id="field-hostname"
+              name="hostname"
+              type="text"
+              [(ngModel)]="form.hostname"
+              maxlength="255"
+              placeholder="Ej. srv-app-01"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-ipAddress">Dirección IP</label>
+            <input
+              id="field-ipAddress"
+              name="ipAddress"
+              type="text"
+              [(ngModel)]="form.ipAddress"
+              maxlength="45"
+              placeholder="Ej. 10.10.1.25"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-operatingSystem">Sistema operativo</label>
+            <input
+              id="field-operatingSystem"
+              name="operatingSystem"
+              type="text"
+              [(ngModel)]="form.operatingSystem"
+              maxlength="200"
+              placeholder="Ej. RHEL 8"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-hostingModel">Modelo de alojamiento</label>
+            <select id="field-hostingModel" name="hostingModel" [(ngModel)]="form.hostingModel">
+              <option value="">Sin definir</option>
+              @for (option of hostingModelOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}
