@@ -42,12 +42,13 @@
           <th>Versión</th>
           <th>Instancia</th>
           <th>Esquema</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="5">
+            <td class="empty-cell" colspan="6">
               <strong>Cargando bases de datos...</strong>
             </td>
           </tr>
@@ -59,10 +60,21 @@
               <td [title]="row.engineVersion || ''">{{ row.engineVersion || '—' }}</td>
               <td [title]="row.instanceName || ''">{{ row.instanceName || '—' }}</td>
               <td [title]="row.schemaName || ''">{{ row.schemaName || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + componentName(row.componentId)"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="5">
+              <td class="empty-cell" colspan="6">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -72,6 +84,9 @@
                       : 'Crea el primer detalle de base de datos para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -90,13 +105,19 @@
       class="record-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Crear detalle de base de datos"
+      [attr.aria-label]="isEditing() ? 'Editar detalle de base de datos' : 'Crear detalle de base de datos'"
     >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">database_detail</span>
-          <h2>Nuevo detalle de base de datos</h2>
-          <p>Selecciona un componente BASE DE DATOS y completa sus datos.</p>
+          <h2>{{ isEditing() ? 'Editar detalle de base de datos' : 'Nuevo detalle de base de datos' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos de la base de datos seleccionada.'
+                : 'Selecciona un componente BASE DE DATOS y completa sus datos.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -186,7 +207,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>

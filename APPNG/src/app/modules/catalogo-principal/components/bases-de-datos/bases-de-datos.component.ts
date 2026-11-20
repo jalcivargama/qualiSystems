@@ -7,7 +7,11 @@ import { ToastService } from '../../../../core/toast.service';
 import { ComponentsService } from '../componentes/components.service';
 import { CatalogComponent } from '../componentes/models/component.model';
 import { DatabaseDetailsService } from './database-details.service';
-import { DatabaseDetail, DatabaseDetailRequest } from './models/database-detail.model';
+import {
+  DatabaseDetail,
+  DatabaseDetailRequest,
+  DatabaseDetailUpdateRequest,
+} from './models/database-detail.model';
 
 type DatabaseRow = DatabaseDetail & { _rowId: string };
 
@@ -35,15 +39,18 @@ export class BasesDeDatosComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: DatabaseForm = this.emptyForm();
 
   readonly availableDatabaseComponents = computed(() => {
+    const editingId = this.editingComponentId();
     const usedIds = new Set(
       this.rows()
         .map((row) => Number(row.componentId))
-        .filter((id) => Number.isFinite(id)),
+        .filter((id) => Number.isFinite(id) && id !== editingId),
     );
     return this.components().filter((component) => {
       const type = String(component.componentType ?? '').trim().toUpperCase();
@@ -74,7 +81,8 @@ export class BasesDeDatosComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return this.resolveComponentId() != null && !!this.form.engine.trim();
+    const componentId = this.resolveComponentId() ?? this.editingComponentId();
+    return componentId != null && !!this.form.engine.trim();
   }
 
   onComponentIdChange(value: number | string | null): void {
@@ -94,14 +102,33 @@ export class BasesDeDatosComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.form = this.emptyForm();
     this.formError.set('');
     this.modalOpen.set(true);
     this.loadComponents();
   }
 
+  openEdit(row: DatabaseRow): void {
+    const componentId = this.toComponentId(row.componentId);
+    this.isEditing.set(true);
+    this.editingComponentId.set(componentId);
+    this.form = {
+      componentId,
+      engine: row.engine ?? '',
+      engineVersion: row.engineVersion ?? '',
+      instanceName: row.instanceName ?? '',
+      schemaName: row.schemaName ?? '',
+    };
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingComponentId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -109,7 +136,7 @@ export class BasesDeDatosComponent implements OnInit {
   save(): void {
     if (this.saving() || !this.canSubmit) return;
 
-    const componentId = this.resolveComponentId();
+    const componentId = this.resolveComponentId() ?? this.editingComponentId();
     if (componentId == null) {
       this.formError.set('Selecciona un componente BASE DE DATOS.');
       return;
@@ -145,12 +172,35 @@ export class BasesDeDatosComponent implements OnInit {
     this.formError.set('');
     this.form.componentId = componentId;
 
-    const body: DatabaseDetailRequest = { componentId, engine };
-    if (engineVersion) body.engineVersion = engineVersion;
-    if (instanceName) body.instanceName = instanceName;
-    if (schemaName) body.schemaName = schemaName;
+    if (this.isEditing()) {
+      const updateBody: DatabaseDetailUpdateRequest = {
+        componentId,
+        engine,
+        engineVersion: engineVersion || null,
+        instanceName: instanceName || null,
+        schemaName: schemaName || null,
+      };
 
-    this.databaseDetailsService.createDatabaseDetail(body).subscribe({
+      this.databaseDetailsService.updateDatabaseDetail(componentId, updateBody).subscribe({
+        next: () => {
+          this.toastService.success('Detalle de base de datos actualizado correctamente');
+          this.closeModal();
+          this.loadDatabaseDetails();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createBody: DatabaseDetailRequest = { componentId, engine };
+    if (engineVersion) createBody.engineVersion = engineVersion;
+    if (instanceName) createBody.instanceName = instanceName;
+    if (schemaName) createBody.schemaName = schemaName;
+
+    this.databaseDetailsService.createDatabaseDetail(createBody).subscribe({
       next: () => {
         this.toastService.success('Detalle de base de datos creado correctamente');
         this.closeModal();
@@ -216,7 +266,10 @@ export class BasesDeDatosComponent implements OnInit {
     return Number.isFinite(id) ? id : null;
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -224,11 +277,15 @@ export class BasesDeDatosComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El detalle de base de datos no existe o ya fue eliminado.';
     if (error.status === 409) {
-      return 'Conflicto: el componente ya tiene detalle o no es de tipo BASE DE DATOS.';
+      return action === 'update'
+        ? 'No se puede actualizar por restricciones relacionadas.'
+        : 'Conflicto: el componente ya tiene detalle o no es de tipo BASE DE DATOS.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los detalles de base de datos.';
+    if (action === 'update') return 'No fue posible actualizar el detalle de base de datos.';
     return 'No fue posible crear el detalle de base de datos.';
   }
 }

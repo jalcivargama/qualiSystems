@@ -10,3 +10,6 @@ export interface DatabaseDetail {
 
 /** Body para CREATE (sin componentType) */
 export type DatabaseDetailRequest = Omit<DatabaseDetail, 'componentType'>;
+
+/** Body para UPDATE (sin componentType) */
+export type DatabaseDetailUpdateRequest = Omit<DatabaseDetail, 'componentType'>;

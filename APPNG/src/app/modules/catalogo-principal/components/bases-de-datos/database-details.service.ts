@@ -2,7 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { DatabaseDetail, DatabaseDetailRequest } from './models/database-detail.model';
+import {
+  DatabaseDetail,
+  DatabaseDetailRequest,
+  DatabaseDetailUpdateRequest,
+} from './models/database-detail.model';
 
 @Injectable({ providedIn: 'root' })
 export class DatabaseDetailsService {
@@ -16,5 +20,9 @@ export class DatabaseDetailsService {
 
   createDatabaseDetail(body: DatabaseDetailRequest): Observable<DatabaseDetail> {
     return this.http.post<DatabaseDetail>(`${this.baseUrl}/catalogos/database-details`, body);
+  }
+
+  updateDatabaseDetail(id: number, body: DatabaseDetailUpdateRequest): Observable<DatabaseDetail> {
+    return this.http.put<DatabaseDetail>(`${this.baseUrl}/catalogos/database-details/${id}`, body);
   }
 }
