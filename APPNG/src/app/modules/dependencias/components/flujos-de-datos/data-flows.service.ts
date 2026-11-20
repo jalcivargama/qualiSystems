@@ -21,4 +21,8 @@ export class DataFlowsService {
   updateDataFlow(id: number, body: DataFlowRequest): Observable<DataFlow> {
     return this.http.put<DataFlow>(`${this.baseUrl}/catalogos/data-flows/${id}`, body);
   }
+
+  deleteDataFlow(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/data-flows/${id}`);
+  }
 }

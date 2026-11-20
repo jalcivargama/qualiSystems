@@ -54,6 +54,7 @@ export class FlujosDeDatosComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingDataFlowId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: DataFlowForm = this.emptyForm();
 
@@ -149,10 +150,41 @@ export class FlujosDeDatosComponent implements OnInit {
     this.editingDataFlowId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingDataFlowId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el flujo de datos a eliminar.');
+      return;
+    }
+
+    const label = this.form.dataName.trim() || id;
+    if (!window.confirm(`¿Eliminar el flujo de datos "${label}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.dataFlowsService.deleteDataFlow(id).subscribe({
+      next: () => {
+        this.toastService.success('Flujo de datos eliminado correctamente');
+        this.closeModal();
+        this.loadDataFlows();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const dependencyId = this.toId(this.form.dependencyId);
     const dataName = this.form.dataName.trim();
@@ -296,7 +328,7 @@ export class FlujosDeDatosComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -307,11 +339,14 @@ export class FlujosDeDatosComponent implements OnInit {
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El flujo de datos no existe o ya fue eliminado.';
     if (error.status === 409) {
-      return 'Conflicto: la dependencia no existe o hay una restricción en base de datos.';
+      return action === 'delete'
+        ? 'No se puede eliminar: el flujo tiene relaciones asociadas.'
+        : 'Conflicto: la dependencia no existe o hay una restricción en base de datos.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los flujos de datos.';
     if (action === 'update') return 'No fue posible actualizar el flujo de datos.';
+    if (action === 'delete') return 'No fue posible eliminar el flujo de datos.';
     return 'No fue posible crear el flujo de datos.';
   }
 }
