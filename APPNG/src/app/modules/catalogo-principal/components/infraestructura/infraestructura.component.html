@@ -1,2 +1,86 @@
-﻿<app-catalog-table [table]="table" />
+﻿<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Workspace</a><span>/</span>
+      <a routerLink="/catalogos/infrastructure_detail">Catálogos</a><span>/</span>
+      <strong>Infraestructura</strong>
+    </div>
+    <h1>Infraestructura</h1>
+    <p>Hosts, direcciones de red, sistema operativo y alojamiento.</p>
+  </div>
+</div>
 
+<div class="catalog-toolbar">
+  <div class="catalog-count">
+    <span class="table-icon">▤</span>
+    <strong>Infraestructura</strong>
+    <span class="record-count">{{ filteredRows().length }} registros</span>
+  </div>
+  <div class="toolbar-actions">
+    <label class="search-box">
+      <span>⌕</span>
+      <input
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        placeholder="Buscar registros..."
+        aria-label="Buscar registros"
+      />
+      <kbd>⌘ K</kbd>
+    </label>
+    <button class="filter-button" type="button" (click)="clearSearch()"><span>☷</span> Limpiar</button>
+  </div>
+</div>
+
+<section class="table-card">
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Infraestructura</th>
+          <th>Hostname</th>
+          <th>Dirección IP</th>
+          <th>Sistema operativo</th>
+          <th>Modelo de alojamiento</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr>
+            <td class="empty-cell" colspan="5">
+              <strong>Cargando infraestructura...</strong>
+            </td>
+          </tr>
+        } @else {
+          @for (row of filteredRows(); track row._rowId) {
+            <tr>
+              <td [title]="componentName(row.componentId)">{{ componentName(row.componentId) }}</td>
+              <td [title]="row.hostname || ''">{{ row.hostname || '—' }}</td>
+              <td [title]="row.ipAddress || ''">{{ row.ipAddress || '—' }}</td>
+              <td [title]="row.operatingSystem || ''">{{ row.operatingSystem || '—' }}</td>
+              <td [title]="labelForHostingModel(row.hostingModel)">
+                {{ labelForHostingModel(row.hostingModel) }}
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td class="empty-cell" colspan="5">
+                <span class="empty-illustration">▤</span>
+                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <small>
+                  {{
+                    searchTerm()
+                      ? 'Prueba con otro término de búsqueda.'
+                      : 'Aún no hay detalles de infraestructura registrados.'
+                  }}
+                </small>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="table-footer">
+    <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
+  </div>
+</section>
