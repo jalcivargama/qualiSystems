@@ -31,6 +31,8 @@ export class RolesDeResponsabilidadComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingRoleId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   form: RoleForm = this.emptyForm();
@@ -59,13 +61,28 @@ export class RolesDeResponsabilidadComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingRoleId.set(null);
     this.form = this.emptyForm();
+    this.formError.set('');
+    this.modalOpen.set(true);
+  }
+
+  openEdit(row: RoleRow): void {
+    this.isEditing.set(true);
+    this.editingRoleId.set(row.roleId ?? null);
+    this.form = {
+      roleCode: row.roleCode ?? '',
+      roleName: row.roleName ?? '',
+    };
     this.formError.set('');
     this.modalOpen.set(true);
   }
 
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingRoleId.set(null);
     this.formError.set('');
     this.saving.set(false);
   }
@@ -95,6 +112,28 @@ export class RolesDeResponsabilidadComponent implements OnInit {
 
     this.saving.set(true);
     this.formError.set('');
+
+    if (this.isEditing()) {
+      const id = this.editingRoleId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar el rol a actualizar.');
+        return;
+      }
+
+      this.rolesService.updateResponsibilityRole(id, body).subscribe({
+        next: () => {
+          this.toastService.success('Rol actualizado correctamente');
+          this.closeModal();
+          this.loadRoles();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
 
     this.rolesService.createResponsibilityRole(body).subscribe({
       next: () => {
@@ -138,7 +177,10 @@ export class RolesDeResponsabilidadComponent implements OnInit {
     };
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -146,10 +188,11 @@ export class RolesDeResponsabilidadComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'El rol no existe o ya fue eliminado.';
     if (error.status === 409) return 'Ya existe un rol con ese código o nombre.';
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar los roles de responsabilidad.'
-      : 'No fue posible crear el rol.';
+    if (action === 'list') return 'No fue posible cargar los roles de responsabilidad.';
+    if (action === 'update') return 'No fue posible actualizar el rol.';
+    return 'No fue posible crear el rol.';
   }
 }

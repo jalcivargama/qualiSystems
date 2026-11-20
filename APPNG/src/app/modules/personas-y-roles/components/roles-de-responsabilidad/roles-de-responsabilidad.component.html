@@ -40,12 +40,13 @@
           <th>ID</th>
           <th>Código</th>
           <th>Nombre del rol</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="3">
+            <td class="empty-cell" colspan="4">
               <strong>Cargando roles...</strong>
             </td>
           </tr>
@@ -55,10 +56,21 @@
               <td [title]="row.roleId">{{ row.roleId || '—' }}</td>
               <td [title]="row.roleCode">{{ row.roleCode || '—' }}</td>
               <td [title]="row.roleName">{{ row.roleName || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar ' + row.roleName"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="3">
+              <td class="empty-cell" colspan="4">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea el primer rol para comenzar.' }}</small>
@@ -79,12 +91,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear rol">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar rol' : 'Crear rol'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">responsibility_role</span>
-          <h2>Nuevo rol</h2>
-          <p>Completa los campos para registrarlo en el catálogo.</p>
+          <h2>{{ isEditing() ? 'Editar rol' : 'Nuevo rol' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza los datos del rol seleccionado.'
+                : 'Completa los campos para registrarlo en el catálogo.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -128,7 +151,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>

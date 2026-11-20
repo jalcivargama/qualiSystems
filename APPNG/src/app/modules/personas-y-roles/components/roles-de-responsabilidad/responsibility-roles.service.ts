@@ -23,4 +23,14 @@ export class ResponsibilityRolesService {
       body,
     );
   }
+
+  updateResponsibilityRole(
+    id: number,
+    body: ResponsibilityRoleRequest,
+  ): Observable<ResponsibilityRole> {
+    return this.http.put<ResponsibilityRole>(
+      `${this.baseUrl}/catalogos/responsibility-roles/${id}`,
+      body,
+    );
+  }
 }
