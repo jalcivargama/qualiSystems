@@ -8,6 +8,7 @@
     <h1>Tipos de dependencia</h1>
     <p>Mecanismos de comunicación entre los componentes.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -64,9 +65,12 @@
                   {{
                     searchTerm()
                       ? 'Prueba con otro término de búsqueda.'
-                      : 'Aún no hay tipos de dependencia registrados.'
+                      : 'Crea el primer tipo de dependencia para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -78,3 +82,68 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Crear tipo de dependencia"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">dependency_type</span>
+          <h2>Nuevo tipo de dependencia</h2>
+          <p>Completa el código y el nombre para registrarlo en el catálogo.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="field-typeCode">Código <i>*</i></label>
+            <input
+              id="field-typeCode"
+              name="typeCode"
+              type="text"
+              [(ngModel)]="form.typeCode"
+              required
+              maxlength="40"
+              placeholder="Ej. USES"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-typeName">Nombre <i>*</i></label>
+            <input
+              id="field-typeName"
+              name="typeName"
+              type="text"
+              [(ngModel)]="form.typeName"
+              required
+              maxlength="100"
+              placeholder="Ej. Usa / consume"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

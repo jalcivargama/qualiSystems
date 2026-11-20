@@ -4,3 +4,6 @@ export interface DependencyType {
   typeCode: string;
   typeName: string;
 }
+
+/** Body para CREATE (sin dependencyTypeId) */
+export type DependencyTypeRequest = Omit<DependencyType, 'dependencyTypeId'>;
