@@ -406,6 +406,12 @@ tbody tr:hover {
   font-style: normal;
   color: #b46458;
 }
+.form-field .field-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 8px;
+  color: #8a9790;
+}
 .form-field input,
 .form-field select,
 .form-field textarea {

@@ -73,8 +73,17 @@ export class PersonasComponent implements OnInit {
     this.searchTerm.set('');
   }
 
+  private readonly emailDomain = '@qualitas.com.mx';
+
   get canSubmit(): boolean {
-    return this.form.fullName.trim().length > 0 && this.form.email.trim().length > 0;
+    return this.form.fullName.trim().length > 0 && this.isValidCompanyEmail(this.form.email);
+  }
+
+  isValidCompanyEmail(email: string): boolean {
+    const value = email.trim().toLocaleLowerCase();
+    const at = value.lastIndexOf('@');
+    if (at <= 0) return false;
+    return value.slice(at) === this.emailDomain;
   }
 
   openCreate(): void {
@@ -154,6 +163,11 @@ export class PersonasComponent implements OnInit {
 
     if (email.length > 320) {
       this.formError.set('El correo no puede superar 320 caracteres.');
+      return;
+    }
+
+    if (!this.isValidCompanyEmail(email)) {
+      this.formError.set(`El correo debe terminar con ${this.emailDomain}.`);
       return;
     }
 
