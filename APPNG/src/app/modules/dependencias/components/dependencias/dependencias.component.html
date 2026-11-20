@@ -45,12 +45,13 @@
           <th>Criticidad</th>
           <th>Descripción</th>
           <th>Creado el</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="8">
+            <td class="empty-cell" colspan="9">
               <strong>Cargando dependencias...</strong>
             </td>
           </tr>
@@ -65,10 +66,21 @@
               <td [title]="labelForCriticality(row.criticality)">{{ labelForCriticality(row.criticality) }}</td>
               <td [title]="row.description || ''">{{ row.description || '—' }}</td>
               <td [title]="row.createdAt || ''">{{ row.createdAt || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="'Editar dependencia ' + (row.dependencyId || '')"
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="8">
+              <td class="empty-cell" colspan="9">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -78,6 +90,9 @@
                       : 'Crea la primera dependencia para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -92,12 +107,23 @@
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
-    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear dependencia">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="isEditing() ? 'Editar dependencia' : 'Crear dependencia'"
+    >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">dependency</span>
-          <h2>Nueva dependencia</h2>
-          <p>Define el origen, destino, tipo y alcance de la relación.</p>
+          <h2>{{ isEditing() ? 'Editar dependencia' : 'Nueva dependencia' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza el origen, destino, tipo y alcance de la relación.'
+                : 'Define el origen, destino, tipo y alcance de la relación.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -199,7 +225,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>

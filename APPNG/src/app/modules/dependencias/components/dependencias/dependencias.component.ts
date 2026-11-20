@@ -65,6 +65,8 @@ export class DependenciasComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
+  readonly editingDependencyId = signal<number | null>(null);
   readonly saving = signal(false);
   readonly formError = signal('');
   readonly selectedOriginId = signal<number | null>(null);
@@ -161,6 +163,8 @@ export class DependenciasComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
+    this.editingDependencyId.set(null);
     this.form = this.emptyForm();
     this.selectedOriginId.set(null);
     this.formError.set('');
@@ -169,8 +173,29 @@ export class DependenciasComponent implements OnInit {
     this.loadDependencyTypes();
   }
 
+  openEdit(row: DependencyRow): void {
+    const originComponentId = this.toId(row.originComponentId);
+    this.isEditing.set(true);
+    this.editingDependencyId.set(this.toId(row.dependencyId));
+    this.form = {
+      originComponentId,
+      targetComponentId: this.toId(row.targetComponentId),
+      dependencyTypeId: this.toId(row.dependencyTypeId),
+      dependencyScope: row.dependencyScope ?? 'INTERNAL',
+      criticality: (row.criticality as Criticality | null) ?? '',
+      description: row.description ?? '',
+    };
+    this.selectedOriginId.set(originComponentId);
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadComponents();
+    this.loadDependencyTypes();
+  }
+
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
+    this.editingDependencyId.set(null);
     this.selectedOriginId.set(null);
     this.formError.set('');
     this.saving.set(false);
@@ -200,19 +225,51 @@ export class DependenciasComponent implements OnInit {
     }
 
     const description = this.form.description.trim();
-    const body: DependencyRequest = {
+
+    this.saving.set(true);
+    this.formError.set('');
+
+    if (this.isEditing()) {
+      const id = this.editingDependencyId();
+      if (id == null) {
+        this.saving.set(false);
+        this.toastService.error('No se pudo identificar la dependencia a actualizar.');
+        return;
+      }
+
+      const updateBody: DependencyRequest = {
+        originComponentId,
+        targetComponentId,
+        dependencyTypeId,
+        dependencyScope,
+        criticality: this.form.criticality || null,
+        description: description || null,
+      };
+
+      this.dependenciesService.updateDependency(id, updateBody).subscribe({
+        next: () => {
+          this.toastService.success('Dependencia actualizada correctamente');
+          this.closeModal();
+          this.loadDependencies();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'update'));
+        },
+      });
+      return;
+    }
+
+    const createBody: DependencyRequest = {
       originComponentId,
       targetComponentId,
       dependencyTypeId,
       dependencyScope,
     };
-    if (this.form.criticality) body.criticality = this.form.criticality;
-    if (description) body.description = description;
+    if (this.form.criticality) createBody.criticality = this.form.criticality;
+    if (description) createBody.description = description;
 
-    this.saving.set(true);
-    this.formError.set('');
-
-    this.dependenciesService.createDependency(body).subscribe({
+    this.dependenciesService.createDependency(createBody).subscribe({
       next: () => {
         this.toastService.success('Dependencia creada correctamente');
         this.closeModal();
@@ -286,7 +343,10 @@ export class DependenciasComponent implements OnInit {
     return Number.isFinite(id) ? id : null;
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -294,12 +354,13 @@ export class DependenciasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) return 'La dependencia no existe o ya fue eliminada.';
     if (error.status === 409) {
       return 'Conflicto: revisa que origen, destino y tipo existan y no violen restricciones.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar las dependencias.'
-      : 'No fue posible crear la dependencia.';
+    if (action === 'list') return 'No fue posible cargar las dependencias.';
+    if (action === 'update') return 'No fue posible actualizar la dependencia.';
+    return 'No fue posible crear la dependencia.';
   }
 }

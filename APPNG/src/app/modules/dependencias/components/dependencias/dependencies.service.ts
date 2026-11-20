@@ -17,4 +17,8 @@ export class DependenciesService {
   createDependency(body: DependencyRequest): Observable<Dependency> {
     return this.http.post<Dependency>(`${this.baseUrl}/catalogos/dependencies`, body);
   }
+
+  updateDependency(id: number, body: DependencyRequest): Observable<Dependency> {
+    return this.http.put<Dependency>(`${this.baseUrl}/catalogos/dependencies/${id}`, body);
+  }
 }
