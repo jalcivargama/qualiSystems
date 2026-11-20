@@ -1,4 +1,4 @@
-/** Entidad que regresa la API (GET /catalogos/system-responsibilities) */
+/** Entidad que regresa la API */
 export interface SystemResponsibility {
   componentId: number;
   personId: number;

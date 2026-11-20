@@ -22,4 +22,16 @@ export class SystemResponsibilitiesService {
       body,
     );
   }
+
+  updateSystemResponsibility(
+    componentId: number,
+    personId: number,
+    roleId: number,
+    body: SystemResponsibility,
+  ): Observable<SystemResponsibility> {
+    return this.http.put<SystemResponsibility>(
+      `${this.baseUrl}/catalogos/system-responsibilities/${componentId}/${personId}/${roleId}`,
+      body,
+    );
+  }
 }

@@ -42,6 +42,7 @@ export class ResponsablesDeSistemasComponent implements OnInit {
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
+  readonly isEditing = signal(false);
   readonly saving = signal(false);
   readonly formError = signal('');
   readonly selectedComponentId = signal<number | null>(null);
@@ -75,6 +76,7 @@ export class ResponsablesDeSistemasComponent implements OnInit {
     const personId = this.selectedPersonId();
     if (componentId == null || personId == null) return this.roles();
 
+    const editingRoleId = this.isEditing() ? this.form.roleId : null;
     const usedRoleIds = new Set(
       this.rows()
         .filter(
@@ -82,7 +84,8 @@ export class ResponsablesDeSistemasComponent implements OnInit {
             Number(row.componentId) === Number(componentId) &&
             Number(row.personId) === Number(personId),
         )
-        .map((row) => Number(row.roleId)),
+        .map((row) => Number(row.roleId))
+        .filter((id) => id !== Number(editingRoleId)),
     );
 
     return this.roles().filter((role) => {
@@ -107,18 +110,21 @@ export class ResponsablesDeSistemasComponent implements OnInit {
   }
 
   onComponentIdChange(value: number | string | null): void {
+    if (this.isEditing()) return;
     this.form.componentId = this.toId(value);
     this.selectedComponentId.set(this.form.componentId);
     this.form.roleId = null;
   }
 
   onPersonIdChange(value: number | string | null): void {
+    if (this.isEditing()) return;
     this.form.personId = this.toId(value);
     this.selectedPersonId.set(this.form.personId);
     this.form.roleId = null;
   }
 
   onRoleIdChange(value: number | string | null): void {
+    if (this.isEditing()) return;
     this.form.roleId = this.toId(value);
   }
 
@@ -159,6 +165,7 @@ export class ResponsablesDeSistemasComponent implements OnInit {
   }
 
   openCreate(): void {
+    this.isEditing.set(false);
     this.form = this.emptyForm();
     this.selectedComponentId.set(null);
     this.selectedPersonId.set(null);
@@ -169,8 +176,29 @@ export class ResponsablesDeSistemasComponent implements OnInit {
     this.loadRoles();
   }
 
+  openEdit(row: SystemResponsibilityRow): void {
+    const componentId = this.toId(row.componentId);
+    const personId = this.toId(row.personId);
+    const roleId = this.toId(row.roleId);
+    this.isEditing.set(true);
+    this.form = {
+      componentId,
+      personId,
+      roleId,
+      notes: row.notes ?? '',
+    };
+    this.selectedComponentId.set(componentId);
+    this.selectedPersonId.set(personId);
+    this.formError.set('');
+    this.modalOpen.set(true);
+    this.loadComponents();
+    this.loadPeople();
+    this.loadRoles();
+  }
+
   closeModal(): void {
     this.modalOpen.set(false);
+    this.isEditing.set(false);
     this.selectedComponentId.set(null);
     this.selectedPersonId.set(null);
     this.formError.set('');
@@ -190,13 +218,38 @@ export class ResponsablesDeSistemasComponent implements OnInit {
       return;
     }
 
-    const body: SystemResponsibility = { componentId, personId, roleId };
-    if (notes) body.notes = notes;
-
     this.saving.set(true);
     this.formError.set('');
 
-    this.systemResponsibilitiesService.createSystemResponsibility(body).subscribe({
+    if (this.isEditing()) {
+      // El backend valida @NotNull en la entidad del body aunque la clave también vaya en la URL.
+      const updateBody: SystemResponsibility = {
+        componentId,
+        personId,
+        roleId,
+        notes: notes || null,
+      };
+
+      this.systemResponsibilitiesService
+        .updateSystemResponsibility(componentId, personId, roleId, updateBody)
+        .subscribe({
+          next: () => {
+            this.toastService.success('Responsabilidad de sistema actualizada correctamente');
+            this.closeModal();
+            this.loadSystemResponsibilities();
+          },
+          error: (error: HttpErrorResponse) => {
+            this.saving.set(false);
+            this.toastService.error(this.resolveErrorMessage(error, 'update'));
+          },
+        });
+      return;
+    }
+
+    const createBody: SystemResponsibility = { componentId, personId, roleId };
+    if (notes) createBody.notes = notes;
+
+    this.systemResponsibilitiesService.createSystemResponsibility(createBody).subscribe({
       next: () => {
         this.toastService.success('Responsabilidad de sistema creada correctamente');
         this.closeModal();
@@ -279,7 +332,10 @@ export class ResponsablesDeSistemasComponent implements OnInit {
     return Number.isFinite(id) ? id : null;
   }
 
-  private resolveErrorMessage(error: HttpErrorResponse, action: 'list' | 'create'): string {
+  private resolveErrorMessage(
+    error: HttpErrorResponse,
+    action: 'list' | 'create' | 'update',
+  ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
       return body.msg;
@@ -287,12 +343,15 @@ export class ResponsablesDeSistemasComponent implements OnInit {
     if (typeof body === 'string' && body.trim()) return body;
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 404) {
+      return 'La responsabilidad de sistema no existe o ya fue eliminada.';
+    }
     if (error.status === 409) {
       return 'Conflicto: la asignación ya existe o sistema/persona/rol no es válido.';
     }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
-    return action === 'list'
-      ? 'No fue posible cargar las responsabilidades de sistema.'
-      : 'No fue posible crear la responsabilidad de sistema.';
+    if (action === 'list') return 'No fue posible cargar las responsabilidades de sistema.';
+    if (action === 'update') return 'No fue posible actualizar la responsabilidad de sistema.';
+    return 'No fue posible crear la responsabilidad de sistema.';
   }
 }

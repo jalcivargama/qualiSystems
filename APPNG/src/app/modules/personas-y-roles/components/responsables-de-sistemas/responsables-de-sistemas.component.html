@@ -41,12 +41,13 @@
           <th>Persona</th>
           <th>Rol</th>
           <th>Notas</th>
+          <th class="actions-header">Acciones</th>
         </tr>
       </thead>
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="4">
+            <td class="empty-cell" colspan="5">
               <strong>Cargando responsables...</strong>
             </td>
           </tr>
@@ -57,10 +58,28 @@
               <td [title]="personName(row.personId)">{{ personName(row.personId) }}</td>
               <td [title]="roleName(row.roleId)">{{ roleName(row.roleId) }}</td>
               <td [title]="row.notes || ''">{{ row.notes || '—' }}</td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="row-action edit-action"
+                  (click)="openEdit(row)"
+                  [attr.aria-label]="
+                    'Editar ' +
+                    componentName(row.componentId) +
+                    ' / ' +
+                    personName(row.personId) +
+                    ' / ' +
+                    roleName(row.roleId)
+                  "
+                  title="Editar"
+                >
+                  ✎
+                </button>
+              </td>
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="4">
+              <td class="empty-cell" colspan="5">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -70,6 +89,9 @@
                       : 'Crea la primera asignación de responsable para comenzar.'
                   }}
                 </small>
+                @if (!searchTerm()) {
+                  <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
+                }
               </td>
             </tr>
           }
@@ -88,13 +110,19 @@
       class="record-modal"
       role="dialog"
       aria-modal="true"
-      aria-label="Crear responsabilidad de sistema"
+      [attr.aria-label]="isEditing() ? 'Editar responsabilidad de sistema' : 'Crear responsabilidad de sistema'"
     >
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">system_responsibility</span>
-          <h2>Nueva responsabilidad</h2>
-          <p>Asigna una persona y un rol a un sistema.</p>
+          <h2>{{ isEditing() ? 'Editar responsabilidad' : 'Nueva responsabilidad' }}</h2>
+          <p>
+            {{
+              isEditing()
+                ? 'Actualiza las notas. La clave sistema/persona/rol no se puede cambiar.'
+                : 'Asigna una persona y un rol a un sistema.'
+            }}
+          </p>
         </div>
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
@@ -109,13 +137,16 @@
               [ngModel]="form.componentId"
               (ngModelChange)="onComponentIdChange($event)"
               required
+              [disabled]="isEditing()"
             >
               <option [ngValue]="null">Selecciona un sistema</option>
               @for (component of systemComponents(); track component.componentId) {
                 <option [ngValue]="+component.componentId!">{{ component.name }}</option>
               }
             </select>
-            <small class="field-hint">Solo componentes tipo SISTEMA.</small>
+            @if (!isEditing()) {
+              <small class="field-hint">Solo componentes tipo SISTEMA.</small>
+            }
           </div>
 
           <div class="form-field">
@@ -126,6 +157,7 @@
               [ngModel]="form.personId"
               (ngModelChange)="onPersonIdChange($event)"
               required
+              [disabled]="isEditing()"
             >
               <option [ngValue]="null">Selecciona una persona</option>
               @for (person of people(); track person.personId) {
@@ -142,14 +174,16 @@
               [ngModel]="form.roleId"
               (ngModelChange)="onRoleIdChange($event)"
               required
-              [disabled]="form.componentId == null || form.personId == null"
+              [disabled]="isEditing() || form.componentId == null || form.personId == null"
             >
               <option [ngValue]="null">Selecciona un rol</option>
               @for (role of availableRoles(); track role.roleId) {
                 <option [ngValue]="+role.roleId!">{{ roleOptionLabel(role) }}</option>
               }
             </select>
-            <small class="field-hint">Excluye roles ya asignados a esa persona en el sistema.</small>
+            @if (!isEditing()) {
+              <small class="field-hint">Excluye roles ya asignados a esa persona en el sistema.</small>
+            }
           </div>
 
           <div class="form-field full-width">
@@ -174,7 +208,11 @@
               Cancelar
             </button>
             <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
-              {{ saving() ? 'Creando...' : 'Crear registro' }}
+              @if (saving()) {
+                {{ isEditing() ? 'Guardando...' : 'Creando...' }}
+              } @else {
+                {{ isEditing() ? 'Guardar cambios' : 'Crear registro' }}
+              }
             </button>
           </div>
         </div>
