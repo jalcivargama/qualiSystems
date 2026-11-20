@@ -8,6 +8,7 @@
     <h1>Sistemas</h1>
     <p>Objetivo, propiedad, criticidad y ciclo de vida de cada sistema.</p>
   </div>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -36,7 +37,7 @@
     <table>
       <thead>
         <tr>
-          <th>ID componente</th>
+          <th>Sistema</th>
           <th>Objetivo de negocio</th>
           <th>Área propietaria</th>
           <th>Criticidad</th>
@@ -55,7 +56,7 @@
         } @else {
           @for (row of filteredRows(); track row._rowId) {
             <tr>
-              <td [title]="row.componentId">{{ row.componentId || '—' }}</td>
+              <td [title]="componentName(row.componentId)">{{ componentName(row.componentId) }}</td>
               <td [title]="row.businessObjective || ''">{{ row.businessObjective || '—' }}</td>
               <td [title]="row.ownerArea || ''">{{ row.ownerArea || '—' }}</td>
               <td [title]="labelForCriticality(row.criticality)">{{ labelForCriticality(row.criticality) }}</td>
@@ -68,7 +69,7 @@
               <td class="empty-cell" colspan="7">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
-                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'No hay detalles de sistema registrados todavía.' }}</small>
+                <small>{{ searchTerm() ? 'Prueba con otro término de búsqueda.' : 'Crea el primer detalle de sistema para comenzar.' }}</small>
               </td>
             </tr>
           }
@@ -80,3 +81,111 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+@if (modalOpen()) {
+  <div class="modal-backdrop">
+    <section class="record-modal" role="dialog" aria-modal="true" aria-label="Crear detalle de sistema">
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">system_detail</span>
+          <h2>Nuevo detalle de sistema</h2>
+          <p>Selecciona un componente SISTEMA y completa sus datos.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
+      </div>
+
+      <form (ngSubmit)="save()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="field-componentId">Componente SISTEMA <i>*</i></label>
+            <select id="field-componentId" name="componentId" [(ngModel)]="form.componentId" required>
+              <option [ngValue]="null">Selecciona un componente</option>
+              <option
+                *ngFor="let component of availableSystemComponents()"
+                [ngValue]="component.componentId"
+              >
+                {{ component.name }}
+              </option>
+            </select>
+            <small class="field-hint">Solo componentes tipo SISTEMA activos y sin detalle asociado.</small>
+            @if (availableSystemComponents().length === 0) {
+              <small class="field-hint">No hay componentes SISTEMA activos disponibles para asociar.</small>
+            }
+          </div>
+
+          <div class="form-field">
+            <label for="field-systemStatus">Estado <i>*</i></label>
+            <select id="field-systemStatus" name="systemStatus" [(ngModel)]="form.systemStatus" required>
+              @for (status of systemStatusOptions; track status.value) {
+                <option [value]="status.value">{{ status.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-criticality">Criticidad</label>
+            <select id="field-criticality" name="criticality" [(ngModel)]="form.criticality">
+              <option value="">Sin definir</option>
+              @for (option of criticalityOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-ownerArea">Área propietaria</label>
+            <input
+              id="field-ownerArea"
+              name="ownerArea"
+              type="text"
+              [(ngModel)]="form.ownerArea"
+              maxlength="200"
+              placeholder="Ingresa área propietaria"
+            />
+          </div>
+
+          <div class="form-field">
+            <label for="field-goLiveDate">Puesta en producción</label>
+            <input id="field-goLiveDate" name="goLiveDate" type="date" [(ngModel)]="form.goLiveDate" />
+          </div>
+
+          <div class="form-field">
+            <label for="field-endOfLifeDate">Fin de vida</label>
+            <input
+              id="field-endOfLifeDate"
+              name="endOfLifeDate"
+              type="date"
+              [(ngModel)]="form.endOfLifeDate"
+            />
+          </div>
+
+          <div class="form-field full-width">
+            <label for="field-businessObjective">Objetivo de negocio</label>
+            <textarea
+              id="field-businessObjective"
+              name="businessObjective"
+              [(ngModel)]="form.businessObjective"
+              rows="3"
+              placeholder="Ingresa objetivo de negocio"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <div class="modal-actions-right">
+            <button type="button" class="secondary-button" (click)="closeModal()" [disabled]="saving()">
+              Cancelar
+            </button>
+            <button type="submit" class="primary-button" [disabled]="saving() || !canSubmit">
+              {{ saving() ? 'Creando...' : 'Crear registro' }}
+            </button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </div>
+}

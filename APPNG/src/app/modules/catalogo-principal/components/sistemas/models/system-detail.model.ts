@@ -2,7 +2,7 @@ export type Criticality = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type SystemStatus = 'PLANNED' | 'ACTIVE' | 'DEPRECATED' | 'RETIRED';
 
-/** Entidad que regresa la API (GET /catalogos/system-details) */
+/** Entidad que regresa la API */
 export interface SystemDetail {
   componentId: number;
   componentType?: 'SYSTEM';
@@ -13,3 +13,6 @@ export interface SystemDetail {
   goLiveDate?: string | null;
   endOfLifeDate?: string | null;
 }
+
+/** Body para CREATE (sin componentType) */
+export type SystemDetailRequest = Omit<SystemDetail, 'componentType'>;
