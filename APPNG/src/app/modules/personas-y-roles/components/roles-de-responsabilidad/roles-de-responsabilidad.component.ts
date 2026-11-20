@@ -34,6 +34,7 @@ export class RolesDeResponsabilidadComponent implements OnInit {
   readonly isEditing = signal(false);
   readonly editingRoleId = signal<number | null>(null);
   readonly saving = signal(false);
+  readonly deleting = signal(false);
   readonly formError = signal('');
   form: RoleForm = this.emptyForm();
 
@@ -85,10 +86,40 @@ export class RolesDeResponsabilidadComponent implements OnInit {
     this.editingRoleId.set(null);
     this.formError.set('');
     this.saving.set(false);
+    this.deleting.set(false);
+  }
+
+  deleteCurrent(): void {
+    if (!this.isEditing() || this.saving() || this.deleting()) return;
+
+    const id = this.editingRoleId();
+    if (id == null) {
+      this.toastService.error('No se pudo identificar el rol a eliminar.');
+      return;
+    }
+
+    if (!window.confirm(`¿Eliminar el rol "${this.form.roleName.trim() || id}"?`)) {
+      return;
+    }
+
+    this.deleting.set(true);
+    this.formError.set('');
+
+    this.rolesService.deleteResponsibilityRole(id).subscribe({
+      next: () => {
+        this.toastService.success('Rol eliminado correctamente');
+        this.closeModal();
+        this.loadRoles();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.deleting.set(false);
+        this.toastService.error(this.resolveErrorMessage(error, 'delete'));
+      },
+    });
   }
 
   save(): void {
-    if (this.saving() || !this.canSubmit) return;
+    if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const roleCode = this.form.roleCode.trim();
     const roleName = this.form.roleName.trim();
@@ -179,7 +210,7 @@ export class RolesDeResponsabilidadComponent implements OnInit {
 
   private resolveErrorMessage(
     error: HttpErrorResponse,
-    action: 'list' | 'create' | 'update',
+    action: 'list' | 'create' | 'update' | 'delete',
   ): string {
     const body = error.error;
     if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
@@ -189,10 +220,15 @@ export class RolesDeResponsabilidadComponent implements OnInit {
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return 'No tienes autorización para esta operación.';
     if (error.status === 404) return 'El rol no existe o ya fue eliminado.';
-    if (error.status === 409) return 'Ya existe un rol con ese código o nombre.';
+    if (error.status === 409) {
+      return action === 'delete'
+        ? 'No se puede eliminar: el rol tiene registros relacionados.'
+        : 'Ya existe un rol con ese código o nombre.';
+    }
     if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
     if (action === 'list') return 'No fue posible cargar los roles de responsabilidad.';
     if (action === 'update') return 'No fue posible actualizar el rol.';
+    if (action === 'delete') return 'No fue posible eliminar el rol.';
     return 'No fue posible crear el rol.';
   }
 }

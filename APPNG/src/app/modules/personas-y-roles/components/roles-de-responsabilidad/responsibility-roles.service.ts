@@ -33,4 +33,8 @@ export class ResponsibilityRolesService {
       body,
     );
   }
+
+  deleteResponsibilityRole(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/catalogos/responsibility-roles/${id}`);
+  }
 }
