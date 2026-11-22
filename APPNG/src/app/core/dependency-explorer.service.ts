@@ -8,6 +8,7 @@ export interface DependencyTreeNode {
   children: DependencyTreeNode[] | null;
   expanded: boolean;
   cycle: boolean;
+  loading?: boolean;
 }
 
 export interface DetailItem {
@@ -175,6 +176,8 @@ export class DependencyExplorerService {
   }
 
   componentType(component: MockRecord): string {
+    const apiLabel = String(component['component_type_label'] ?? '');
+    if (apiLabel) return apiLabel;
     const labels: Record<string, string> = {
       SYSTEM: 'Sistema',
       API: 'API',
@@ -190,6 +193,8 @@ export class DependencyExplorerService {
 
   dependencyType(dependency: MockRecord | undefined): string {
     if (!dependency) return '';
+    const apiTypeName = String(dependency['dependency_type_name'] ?? '');
+    if (apiTypeName) return apiTypeName;
     const type = this.store.getRecords('dependency_type').find(
       (record) => String(record['dependency_type_id']) === String(dependency['dependency_type_id']),
     );
