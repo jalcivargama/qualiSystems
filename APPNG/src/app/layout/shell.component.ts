@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { environment } from '../../environments/environment';
 import { AuthService } from '../pages/login/auth.service';
 
 interface NavigationItem {
@@ -21,6 +22,7 @@ interface NavigationGroup {
 })
 export class ShellComponent {
   openMenu: string | null = null;
+  readonly appVersion = environment.version;
   readonly navigationGroups: NavigationGroup[] = [
     {
       label: 'Inicio',
