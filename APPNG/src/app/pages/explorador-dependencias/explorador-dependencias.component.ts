@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { take } from 'rxjs';
 import { ToastService } from '../../core/toast.service';
 import {
   ComponentCardDetails,
@@ -27,6 +28,7 @@ export class ExploradorDependenciasComponent implements OnInit {
   private readonly api = inject(DependencyExplorerApiService);
   private readonly toastService = inject(ToastService);
   private readonly changeDetector = inject(ChangeDetectorRef);
+  private readonly route = inject(ActivatedRoute);
 
   components: MockRecord[] = [];
   selectedId = '';
@@ -35,11 +37,15 @@ export class ExploradorDependenciasComponent implements OnInit {
   private readonly detailCache = new Map<string, ComponentCardDetails>();
   private readonly responseCache = new Map<string, DependencyExplorerResponse>();
   private readonly expandedDetails = new Set<string>();
+  private initialComponentId = '';
 
   constructor(readonly explorer: DependencyExplorerService) {}
 
   ngOnInit(): void {
-    this.loadComponents();
+    this.route.queryParamMap.pipe(take(1)).subscribe((params) => {
+      this.initialComponentId = params.get('componentId') ?? '';
+      this.loadComponents();
+    });
   }
 
   String(value: unknown): string {
@@ -163,6 +169,18 @@ export class ExploradorDependenciasComponent implements OnInit {
           is_active: component.isActive,
         }));
         this.loadingComponents = false;
+        if (
+          this.initialComponentId &&
+          this.components.some(
+            (component) =>
+              String(component['component_id']) === this.initialComponentId,
+          )
+        ) {
+          this.selectedId = this.initialComponentId;
+          this.selectComponent(this.initialComponentId);
+          this.initialComponentId = '';
+          return;
+        }
         this.changeDetector.markForCheck();
       },
       error: (error: HttpErrorResponse) => {
