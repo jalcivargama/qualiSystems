@@ -20,6 +20,7 @@ import { StackTecnologicoComponent } from './modules/tecnologia/components/stack
 import { TiposDeDependenciaComponent } from './modules/dependencias/components/tipos-de-dependencia/tipos-de-dependencia.component';
 import { DependenciasComponent } from './modules/dependencias/components/dependencias/dependencias.component';
 import { FlujosDeDatosComponent } from './modules/dependencias/components/flujos-de-datos/flujos-de-datos.component';
+import { BusquedaComponentesComponent } from './pages/busqueda-componentes/busqueda-componentes.component';
 
 const requireSession = () => {
   const auth = inject(AuthService);
@@ -36,6 +37,7 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', component: DashboardComponent },
+      { path: 'busqueda-componentes', component: BusquedaComponentesComponent },
       { path: 'explorador-dependencias', component: ExploradorDependenciasComponent },
       { path: 'catalogos/catalog_component', component: ComponentesComponent },
       { path: 'catalogos/system_detail', component: SistemasComponent },

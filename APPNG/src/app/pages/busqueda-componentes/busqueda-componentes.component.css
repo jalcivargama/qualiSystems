@@ -1,0 +1,304 @@
+:host {
+  display: block;
+  --search-primary: #902a7d;
+  --search-secondary: #00949f;
+}
+
+.page-heading,
+.search-actions,
+.results-heading,
+.results-heading > div {
+  display: flex;
+  align-items: center;
+}
+
+.page-heading {
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #a0aaa4;
+  font-size: 10px;
+}
+
+.breadcrumbs a {
+  color: #849189;
+  text-decoration: none;
+}
+
+.breadcrumbs strong {
+  color: #607168;
+}
+
+.page-eyebrow {
+  color: var(--search-primary);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 1.4px;
+}
+
+h1 {
+  margin: 5px 0;
+  color: #29352f;
+  font-size: 25px;
+}
+
+.page-heading p {
+  margin: 0;
+  color: #89948e;
+  font-size: 11px;
+}
+
+.search-card,
+.results-card {
+  background: #fff;
+  border: 1px solid #e8e6e9;
+  border-radius: 9px;
+}
+
+.search-card {
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.filter-field > span {
+  color: #5a675f;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.filter-field input,
+.filter-field select {
+  width: 100%;
+  border: 1px solid #e3e2e4;
+  border-radius: 6px;
+  background: #fff;
+  color: #48564e;
+  font: inherit;
+  font-size: 10px;
+  outline: none;
+}
+
+.filter-field input {
+  height: 37px;
+  padding: 0 10px;
+}
+
+.filter-field select {
+  padding: 7px;
+}
+
+.filter-field input:focus,
+.filter-field select:focus {
+  border-color: var(--search-primary);
+  box-shadow: 0 0 0 3px rgba(144, 42, 125, 0.1);
+}
+
+.filter-field small {
+  color: #9aa39d;
+  font-size: 8px;
+}
+
+.search-actions {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f0eef0;
+}
+
+.match-note {
+  margin-right: auto;
+  color: #8c9690;
+  font-size: 9px;
+}
+
+.primary-button,
+.secondary-button {
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.primary-button {
+  border: 1px solid #1d382f;
+  background: #1d382f;
+  color: white;
+}
+
+.secondary-button {
+  border: 1px solid #e1e7e3;
+  background: #fff;
+  color: #65736b;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.results-card {
+  overflow: hidden;
+}
+
+.results-heading {
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 0 15px;
+  border-bottom: 1px solid #eef1ee;
+}
+
+.results-heading > div {
+  gap: 8px;
+}
+
+.results-heading strong {
+  color: #536158;
+  font-size: 11px;
+}
+
+.results-heading > span,
+.table-icon {
+  color: #849188;
+  font-size: 9px;
+}
+
+.table-icon {
+  color: var(--search-secondary);
+  font-size: 15px;
+}
+
+.table-scroll {
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 11px 13px;
+  border-bottom: 1px solid #f0f2f0;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  background: #fafbfa;
+  color: #99a49d;
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+td {
+  color: #657269;
+  font-size: 9px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+tbody tr[tabindex] {
+  cursor: pointer;
+  outline: none;
+}
+
+tbody tr[tabindex]:hover,
+tbody tr[tabindex]:focus {
+  background: #fbf7fb;
+}
+
+.component-name {
+  color: #445249;
+  font-weight: 650;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #598249;
+}
+
+.status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #71a451;
+}
+
+.status.inactive {
+  color: #a16a66;
+}
+
+.status.inactive i {
+  background: #bf7771;
+}
+
+.empty-cell {
+  height: 130px;
+  color: #8b9690;
+  text-align: center;
+}
+
+.empty-cell strong,
+.empty-cell small {
+  display: block;
+}
+
+.empty-cell strong {
+  color: #657269;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.empty-cell small {
+  font-size: 9px;
+}
+
+@media (max-width: 1050px) {
+  .filter-grid {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-actions {
+    flex-wrap: wrap;
+  }
+
+  .match-note {
+    width: 100%;
+  }
+}
