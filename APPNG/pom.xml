@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.qualitas.web.qualisystems</groupId>
+  <artifactId>qualiSystems</artifactId>
+  <packaging>war</packaging>
+  <version>1.0-SNAPSHOT</version>
+  <name>qualiSystems</name>
+  <description>Frontend Angular de Qualitas Systems (WAR para WebLogic)</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <npm.build.configuration>production</npm.build.configuration>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>prod</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <npm.build.configuration>production</npm.build.configuration>
+      </properties>
+    </profile>
+    <profile>
+      <id>qa</id>
+      <properties>
+        <npm.build.configuration>qa</npm.build.configuration>
+      </properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <finalName>qualiSystems</finalName>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.6.0</version>
+        <executions>
+          <execution>
+            <id>npm-install</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>npm</executable>
+              <arguments>
+                <argument>install</argument>
+              </arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>npm-build</id>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>npm</executable>
+              <arguments>
+                <argument>run</argument>
+                <argument>build</argument>
+                <argument>--</argument>
+                <argument>--configuration</argument>
+                <argument>${npm.build.configuration}</argument>
+              </arguments>
+              <environmentVariables>
+                <PUBLIC_URL>/${project.artifactId}/</PUBLIC_URL>
+              </environmentVariables>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-war-plugin</artifactId>
+        <version>3.2.2</version>
+        <configuration>
+          <webXml>war/web.xml</webXml>
+          <webResources>
+            <resource>
+              <directory>dist/qualiSystems</directory>
+            </resource>
+            <resource>
+              <directory>war</directory>
+              <targetPath>WEB-INF</targetPath>
+              <includes>
+                <include>weblogic.xml</include>
+              </includes>
+            </resource>
+          </webResources>
+          <outputDirectory>deployments</outputDirectory>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

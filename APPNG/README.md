@@ -2,18 +2,50 @@
 
 Prototipo navegable creado con Angular 21 standalone. Incluye inicio de sesión de demostración, un dashboard y operaciones CRUD mock para cada una de las 14 tablas definidas en [`..\oracle_catalogo_sistemas_dependencias.sql`](../oracle_catalogo_sistemas_dependencias.sql).
 
-## Ejecutar
+## Ejecutar en local
 
 Requiere Node.js compatible con Angular 21. Se recomienda Node.js 24 LTS y npm 11.19.0.
 Consultar la [guía de instalación y despliegue](../GUIA_INSTALACION_DESPLIEGUE.md)
-para los requisitos, la compilación de producción y el empaquetado WAR.
+para más detalle de requisitos y despliegue.
 
 ```powershell
-npm ci
+npm install
 npm start
 ```
 
-La aplicación estará disponible en `http://localhost:4200`.
+La aplicación estará disponible en `http://localhost:4200` (`baseHref` de desarrollo: `/`).
+
+## Generar WAR (WebLogic)
+
+Requiere Node.js/npm y Maven. El POM ejecuta `npm install` y `npm run build` en
+`generate-resources`, y empaqueta el resultado con `maven-war-plugin`.
+
+```powershell
+npm install
+mvn clean package
+```
+
+Salida:
+
+```text
+deployments/qualiSystems.war
+```
+
+URL esperada tras el despliegue:
+
+```text
+https://host/qualiSystems/
+```
+
+Perfiles Maven:
+
+| Comando | Configuration Angular | Environment |
+| --- | --- | --- |
+| `mvn clean package` o `mvn clean package -Pprod` | `production` | `environment.prod.ts` |
+| `mvn clean package -Pqa` | `qa` | `environment.qa.ts` |
+
+El `context-root`, `artifactId`, `finalName`, `baseHref` y el nombre del WAR
+coinciden: `qualiSystems`.
 
 ## Acceso de demostración
 

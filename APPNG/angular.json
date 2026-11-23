@@ -47,6 +47,11 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
+            "baseHref": "/qualiSystems/",
+            "outputPath": {
+              "base": "dist/qualiSystems",
+              "browser": ""
+            },
             "assets": [
               {
                 "glob": "**/*",
@@ -64,6 +69,33 @@
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "9.5kB",
+                  "maximumError": "10kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "qa": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.qa.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -79,6 +111,7 @@
               "outputHashing": "all"
             },
             "development": {
+              "baseHref": "/",
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
@@ -91,6 +124,9 @@
           "configurations": {
             "production": {
               "buildTarget": "APPNG:build:production"
+            },
+            "qa": {
+              "buildTarget": "APPNG:build:qa"
             },
             "development": {
               "buildTarget": "APPNG:build:development"
