@@ -9,6 +9,8 @@
     <p>Sistemas, APIs, bases de datos, infraestructura y servicios conectados.</p>
   </div>
   <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
+  <button class="primary-button" type="button" (click)="openNuevoSistema()"><span>＋</span> Nuevo registro 2</button>
+  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro 3</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -94,6 +96,12 @@
     <span>Mostrando <strong>{{ filteredRows().length }}</strong> de <strong>{{ rows().length }}</strong> registros</span>
   </div>
 </section>
+
+<app-nuevo-sistema-modal
+  [open]="nuevoSistemaModalOpen()"
+  (closed)="closeNuevoSistema()"
+  (saved)="onNuevoSistemaSaved($event)"
+/>
 
 @if (modalOpen()) {
   <div class="modal-backdrop">
