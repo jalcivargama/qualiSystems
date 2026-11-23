@@ -10,8 +10,15 @@
 
 <section class="explorer-toolbar">
   <label for="component-selector">Componente inicial</label>
-  <select id="component-selector" [(ngModel)]="selectedId" (ngModelChange)="selectComponent($event)">
-    <option value="">Selecciona un componente del catálogo</option>
+  <select
+    id="component-selector"
+    [(ngModel)]="selectedId"
+    (ngModelChange)="selectComponent($event)"
+    [disabled]="loadingComponents"
+  >
+    <option value="">
+      {{ loadingComponents ? 'Cargando componentes...' : 'Selecciona un componente del catálogo' }}
+    </option>
     @for (component of components; track component['component_id']) {
       <option [value]="String(component['component_id'])">
         {{ component['name'] }} · {{ explorer.componentType(component) }}{{ component['acronym'] ? ' · ' + component['acronym'] : '' }}
@@ -56,7 +63,8 @@
         <div class="root-label"><i></i> INICIO DEL RECORRIDO</div>
       }
 
-      <button class="component-card-trigger" type="button" (click)="toggle(node)" [disabled]="node.cycle"
+      <button class="component-card-trigger" type="button" (click)="toggle(node)"
+        [disabled]="node.cycle || node.loading"
         [attr.aria-expanded]="node.expanded">
         <span class="component-type">{{ explorer.componentType(node.component) }}</span>
         <strong class="component-title">{{ node.component['name'] }}</strong>
@@ -66,7 +74,9 @@
           <span><small>Estatus</small><b class="status" [class.inactive]="node.component['is_active'] === 'N'"><i></i>{{ explorer.componentStatus(node.component) }}</b></span>
         </span>
         <span class="expand-prompt">
-          @if (node.cycle) {
+          @if (node.loading) {
+            Cargando dependencias...
+          } @else if (node.cycle) {
             Ciclo detectado <span class="cycle-indicator">↻</span>
           } @else if (node.expanded) {
             Contraer dependencias <span class="expand-chevron">⌃</span>
@@ -76,54 +86,67 @@
         </span>
       </button>
 
-      <div class="component-details">
-        @if (detailsFor(node.component); as detail) {
-          @if (detail.description) {
-            <section class="detail-section description-section">
-              <h3><span>◌</span> Descripción</h3>
-              <p>{{ detail.description }}</p>
-            </section>
-          }
-          @if (detail.subtype.length) {
+      <button
+        class="details-toggle expand-prompt"
+        type="button"
+        [attr.aria-expanded]="detailsOpen(node)"
+        (click)="toggleDetails(node)"
+      >
+        <span>◈</span>
+        {{ detailsOpen(node) ? 'Ocultar detalles' : 'Detalles' }}
+        <span class="expand-chevron">{{ detailsOpen(node) ? '⌃' : '⌄' }}</span>
+      </button>
+
+      @if (detailsOpen(node)) {
+        <div class="component-details">
+          @if (detailsFor(node.component); as detail) {
+            @if (detail.description) {
+              <section class="detail-section description-section">
+                <h3><span>◌</span> Descripción</h3>
+                <p>{{ detail.description }}</p>
+              </section>
+            }
+            @if (detail.subtype.length) {
+              <section class="detail-section">
+                <h3><span>◈</span> Detalle del componente</h3>
+                <div class="detail-grid">
+                  @for (item of detail.subtype; track item.label) {
+                    <div class="detail-item"><small>{{ item.label }}</small><b [title]="item.value">{{ item.value }}</b></div>
+                  }
+                </div>
+              </section>
+            }
             <section class="detail-section">
-              <h3><span>◈</span> Detalle del componente</h3>
-              <div class="detail-grid">
-                @for (item of detail.subtype; track item.label) {
-                  <div class="detail-item"><small>{{ item.label }}</small><b [title]="item.value">{{ item.value }}</b></div>
-                }
-              </div>
+              <h3><span>♙</span> Responsables y roles <em>{{ detail.people.length }}</em></h3>
+              @if (detail.people.length) {
+                <div class="person-list">
+                  @for (person of detail.people; track person.name + person.role) {
+                    <div class="person-chip"><span class="person-avatar">{{ initials(person.name) }}</span><span><b>{{ person.name }}</b><small>{{ person.role }}</small></span></div>
+                  }
+                </div>
+              } @else {
+                <p class="no-detail">Sin responsables asignados</p>
+              }
+            </section>
+            <section class="detail-section">
+              <h3><span>▤</span> Stack tecnológico <em>{{ detail.technologies.length }}</em></h3>
+              @if (detail.technologies.length) {
+                <div class="tag-list">@for (technology of detail.technologies; track technology) { <span class="info-tag technology-tag">{{ technology }}</span> }</div>
+              } @else {
+                <p class="no-detail">Sin tecnologías registradas</p>
+              }
+            </section>
+            <section class="detail-section">
+              <h3><span>⌑</span> Despliegues <em>{{ detail.deployments.length }}</em></h3>
+              @if (detail.deployments.length) {
+                <div class="tag-list">@for (deployment of detail.deployments; track deployment) { <span class="info-tag deployment-tag">{{ deployment }}</span> }</div>
+              } @else {
+                <p class="no-detail">Sin despliegues registrados</p>
+              }
             </section>
           }
-          <section class="detail-section">
-            <h3><span>♙</span> Responsables y roles <em>{{ detail.people.length }}</em></h3>
-            @if (detail.people.length) {
-              <div class="person-list">
-                @for (person of detail.people; track person.name + person.role) {
-                  <div class="person-chip"><span class="person-avatar">{{ initials(person.name) }}</span><span><b>{{ person.name }}</b><small>{{ person.role }}</small></span></div>
-                }
-              </div>
-            } @else {
-              <p class="no-detail">Sin responsables asignados</p>
-            }
-          </section>
-          <section class="detail-section">
-            <h3><span>▤</span> Stack tecnológico <em>{{ detail.technologies.length }}</em></h3>
-            @if (detail.technologies.length) {
-              <div class="tag-list">@for (technology of detail.technologies; track technology) { <span class="info-tag technology-tag">{{ technology }}</span> }</div>
-            } @else {
-              <p class="no-detail">Sin tecnologías registradas</p>
-            }
-          </section>
-          <section class="detail-section">
-            <h3><span>⌑</span> Despliegues <em>{{ detail.deployments.length }}</em></h3>
-            @if (detail.deployments.length) {
-              <div class="tag-list">@for (deployment of detail.deployments; track deployment) { <span class="info-tag deployment-tag">{{ deployment }}</span> }</div>
-            } @else {
-              <p class="no-detail">Sin despliegues registrados</p>
-            }
-          </section>
-        }
-      </div>
+        </div>
+      }
       @if (node.expanded && node.children?.length === 0) {
         <div class="leaf-note"><span>✓</span> No tiene dependencias salientes registradas.</div>
       }

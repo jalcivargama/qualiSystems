@@ -1,0 +1,140 @@
+<div class="page-heading">
+  <div>
+    <div class="breadcrumbs">
+      <a routerLink="/dashboard">Inicio</a><span>/</span>
+      <strong>Búsqueda de componentes</strong>
+    </div>
+    <span class="page-eyebrow">LOCALIZACIÓN DE ARQUITECTURA</span>
+    <h1>Búsqueda de componentes</h1>
+    <p>Encuentra componentes por cualquier dato general, tecnología o responsable.</p>
+  </div>
+</div>
+
+<form class="search-card" (ngSubmit)="search()">
+  <div class="filter-grid">
+    <label class="filter-field type-filter">
+      <span>Tipo de componente</span>
+      <select multiple name="componentTypes" [(ngModel)]="form.componentTypes" size="6">
+        @for (type of componentTypes; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
+      </select>
+      <small>Puedes seleccionar varios.</small>
+    </label>
+
+    <label class="filter-field">
+      <span>Nombre</span>
+      <input name="name" [(ngModel)]="form.name" placeholder="Ej. Portal, SAC..." maxlength="200" />
+    </label>
+
+    <label class="filter-field">
+      <span>Acrónimo</span>
+      <input name="acronym" [(ngModel)]="form.acronym" placeholder="Ej. API-C..." maxlength="50" />
+    </label>
+
+    <label class="filter-field">
+      <span>Tecnología</span>
+      <select
+        multiple
+        name="technologyIds"
+        [(ngModel)]="form.technologyIds"
+        [disabled]="loadingOptions"
+        size="6"
+      >
+        @for (technology of technologies; track technology.technologyId) {
+          <option [value]="technology.technologyId!">{{ technology.name }}</option>
+        }
+      </select>
+      <small>{{ form.technologyIds.length }} seleccionada(s)</small>
+    </label>
+
+    <label class="filter-field">
+      <span>Responsable</span>
+      <select
+        multiple
+        name="personIds"
+        [(ngModel)]="form.personIds"
+        [disabled]="loadingOptions"
+        size="6"
+      >
+        @for (person of people; track person.personId) {
+          <option [value]="person.personId!">{{ person.fullName }}</option>
+        }
+      </select>
+      <small>{{ form.personIds.length }} seleccionado(s)</small>
+    </label>
+  </div>
+
+  <div class="search-actions">
+    <span class="match-note">Los criterios se combinan con coincidencia OR.</span>
+    <button class="secondary-button" type="button" (click)="clear()" [disabled]="searching">Limpiar</button>
+    <button class="primary-button" type="submit" [disabled]="searching || loadingOptions">
+      {{ searching ? 'Buscando...' : 'Buscar componentes' }}
+    </button>
+  </div>
+</form>
+
+<section class="results-card">
+  <div class="results-heading">
+    <div><span class="table-icon">▤</span><strong>Resultados</strong></div>
+    <span>{{ results.length }} componente(s)</span>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Tipo</th>
+          <th>Nombre</th>
+          <th>Acrónimo</th>
+          <th>Descripción</th>
+          <th>Tecnologías</th>
+          <th>Responsables</th>
+          <th>Estatus</th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (searching) {
+          <tr><td class="empty-cell" colspan="8">Buscando componentes...</td></tr>
+        } @else if (hasSearched && !results.length) {
+          <tr>
+            <td class="empty-cell" colspan="8">
+              <strong>No se encontraron componentes</strong>
+              <small>Ajusta alguno de los criterios y vuelve a buscar.</small>
+            </td>
+          </tr>
+        } @else if (!hasSearched) {
+          <tr>
+            <td class="empty-cell" colspan="8">
+              <strong>Configura los criterios y ejecuta la búsqueda</strong>
+              <small>Doble clic sobre un resultado para abrirlo en el explorador.</small>
+            </td>
+          </tr>
+        } @else {
+          @for (result of results; track result.componentId) {
+            <tr
+              tabindex="0"
+              title="Doble clic para abrir en el explorador"
+              (dblclick)="openComponent(result)"
+              (keydown.enter)="openComponent(result)"
+            >
+              <td>{{ result.componentId }}</td>
+              <td>{{ result.componentTypeLabel }}</td>
+              <td><strong class="component-name">{{ result.name }}</strong></td>
+              <td>{{ result.acronym || '—' }}</td>
+              <td>{{ result.description || '—' }}</td>
+              <td>{{ technologySummary(result) || 'Sin tecnologías' }}</td>
+              <td>{{ responsibilitySummary(result) || 'Sin responsables' }}</td>
+              <td>
+                <span class="status" [class.inactive]="result.isActive === 'N'">
+                  <i></i>{{ result.isActive === 'Y' ? 'Activo' : 'Inactivo' }}
+                </span>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+</section>
