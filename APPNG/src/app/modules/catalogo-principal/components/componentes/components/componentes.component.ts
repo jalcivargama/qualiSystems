@@ -13,6 +13,8 @@ import {
 } from '../models/component.model';
 import { NuevoSistemaModalComponent } from '../nuevo-sistema-modal/nuevo-sistema-modal.component';
 import { NuevoSistemaForm } from '../nuevo-sistema-modal/nuevo-sistema-modal.models';
+import { NuevoComponenteModalComponent } from '../nuevo-componente-modal/nuevo-componente-modal.component';
+import { NuevoComponenteForm } from '../nuevo-componente-modal/nuevo-componente-modal.models';
 
 type ComponentRow = CatalogComponent & { _rowId: string };
 
@@ -26,7 +28,13 @@ type CreateForm = {
 
 @Component({
   selector: 'app-componentes',
-  imports: [CommonModule, FormsModule, RouterLink, NuevoSistemaModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    NuevoSistemaModalComponent,
+    NuevoComponenteModalComponent,
+  ],
   templateUrl: './componentes.component.html',
   styleUrl: './componentes.component.css',
 })
@@ -61,6 +69,7 @@ export class ComponentesComponent implements OnInit {
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
   readonly nuevoSistemaModalOpen = signal(false);
+  readonly nuevoComponenteModalOpen = signal(false);
   readonly isEditing = signal(false);
   readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
@@ -115,6 +124,18 @@ export class ComponentesComponent implements OnInit {
 
   onNuevoSistemaSaved(_payload: NuevoSistemaForm): void {
     this.nuevoSistemaModalOpen.set(false);
+  }
+
+  openNuevoComponente(): void {
+    this.nuevoComponenteModalOpen.set(true);
+  }
+
+  closeNuevoComponente(): void {
+    this.nuevoComponenteModalOpen.set(false);
+  }
+
+  onNuevoComponenteSaved(_payload: NuevoComponenteForm): void {
+    this.nuevoComponenteModalOpen.set(false);
   }
 
   openEdit(row: ComponentRow): void {

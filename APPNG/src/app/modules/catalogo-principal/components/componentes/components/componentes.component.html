@@ -10,7 +10,7 @@
   </div>
   <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro</button>
   <button class="primary-button" type="button" (click)="openNuevoSistema()"><span>＋</span> Nuevo registro 2</button>
-  <button class="primary-button" type="button" (click)="openCreate()"><span>＋</span> Nuevo registro 3</button>
+  <button class="primary-button" type="button" (click)="openNuevoComponente()"><span>＋</span> Nuevo registro 3</button>
 </div>
 
 <div class="catalog-toolbar">
@@ -101,6 +101,12 @@
   [open]="nuevoSistemaModalOpen()"
   (closed)="closeNuevoSistema()"
   (saved)="onNuevoSistemaSaved($event)"
+/>
+
+<app-nuevo-componente-modal
+  [open]="nuevoComponenteModalOpen()"
+  (closed)="closeNuevoComponente()"
+  (saved)="onNuevoComponenteSaved($event)"
 />
 
 @if (modalOpen()) {
