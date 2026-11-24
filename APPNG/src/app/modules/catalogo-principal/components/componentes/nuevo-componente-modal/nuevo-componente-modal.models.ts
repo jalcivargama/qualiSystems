@@ -25,9 +25,11 @@ export type FrontendDetails = {
 };
 
 export type ApiDetails = {
+  apiVersion: string;
+  url: string;
   protocol: string;
   authenticationMethod: string;
-  environments: EnvConfig[];
+  slaDescription: string;
 };
 
 export type DatabaseDetails = {
@@ -74,16 +76,14 @@ export const DEPLOYMENT_ENVIRONMENTS: {
   { value: 'PRODUCTION', label: 'PRODUCCIÓN' },
 ];
 
-export const PROTOCOL_OPTIONS = ['REST', 'SOAP', 'GraphQL', 'gRPC', 'Otro'] as const;
-
-export const AUTH_METHOD_OPTIONS = [
-  'Ninguna',
-  'Basic',
-  'JWT',
-  'Bearer',
-  'OAuth 2.0',
-  'API Key',
-  'mTLS',
+export const PROTOCOL_OPTIONS = [
+  'REST',
+  'SOAP',
+  'GraphQL',
+  'gRPC',
+  'HTTPS',
+  'HTTP',
+  'Otro',
 ] as const;
 
 export const CRITICALITY_OPTIONS: { value: Criticality; label: string }[] = [

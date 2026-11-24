@@ -182,6 +182,75 @@
             </div>
           </div>
 
+        }
+
+        @if (kind() === 'API') {
+          <div class="section-block">
+            <div class="section-title">Detalle API</div>
+            <p class="section-sub">Versión, endpoint, protocolo, autenticación y SLA.</p>
+
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="nc-api-version">Versión</label>
+                <input
+                  id="nc-api-version"
+                  name="apiVersion"
+                  type="text"
+                  [(ngModel)]="api.apiVersion"
+                  maxlength="50"
+                  placeholder="Ej. 1.0.0"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-api-protocol">Protocolo</label>
+                <select id="nc-api-protocol" name="apiProtocol" [(ngModel)]="api.protocol">
+                  <option value="">Sin definir</option>
+                  @for (protocol of protocolOptions; track protocol) {
+                    <option [value]="protocol">{{ protocol }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field full-width">
+                <label for="nc-api-url">URL</label>
+                <input
+                  id="nc-api-url"
+                  name="apiUrl"
+                  type="url"
+                  [(ngModel)]="api.url"
+                  maxlength="2000"
+                  placeholder="https://api.ejemplo.com/v1"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-api-auth">Autenticación</label>
+                <input
+                  id="nc-api-auth"
+                  name="apiAuth"
+                  type="text"
+                  [(ngModel)]="api.authenticationMethod"
+                  maxlength="100"
+                  placeholder="Ej. Bearer JWT"
+                />
+              </div>
+
+              <div class="form-field full-width">
+                <label for="nc-api-sla">Descripción de SLA</label>
+                <textarea
+                  id="nc-api-sla"
+                  name="apiSla"
+                  [(ngModel)]="api.slaDescription"
+                  rows="3"
+                  placeholder="Ej. Disponibilidad 99.9%"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (kind() === 'SYSTEM' || kind() === 'API') {
           <div class="section-block">
             <div class="section-title">Despliegues</div>
             <p class="section-sub">URL por ambiente. Solo se guardan los ambientes con URL.</p>
@@ -234,62 +303,6 @@
                       [ngModel]="env.url"
                       [name]="'frontUrl-' + env.env"
                       (ngModelChange)="updateEnvField('frontend', envIndex, 'url', $event)"
-                      placeholder="https://…"
-                    />
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        @if (kind() === 'API') {
-          <div class="section-block">
-            <div class="section-title">Detalle API</div>
-            <p class="section-sub">Protocolo, autenticación y configuración por ambiente.</p>
-
-            <div class="form-grid">
-              <div class="form-field">
-                <label for="nc-api-protocol">Protocolo</label>
-                <select id="nc-api-protocol" name="apiProtocol" [(ngModel)]="api.protocol">
-                  @for (protocol of protocolOptions; track protocol) {
-                    <option [value]="protocol">{{ protocol }}</option>
-                  }
-                </select>
-              </div>
-              <div class="form-field">
-                <label for="nc-api-auth">Tipo autenticación</label>
-                <select id="nc-api-auth" name="apiAuth" [(ngModel)]="api.authenticationMethod">
-                  @for (auth of authMethodOptions; track auth) {
-                    <option [value]="auth">{{ auth }}</option>
-                  }
-                </select>
-              </div>
-            </div>
-
-            <div class="env-grid">
-              @for (env of api.environments; track env.env; let envIndex = $index) {
-                <div class="env-card">
-                  <span class="env-badge">{{ env.env }}</span>
-                  <div class="form-field">
-                    <label [attr.for]="'nc-api-ver-' + env.env">Versión</label>
-                    <input
-                      [id]="'nc-api-ver-' + env.env"
-                      type="text"
-                      [ngModel]="env.version"
-                      [name]="'apiVersion-' + env.env"
-                      (ngModelChange)="updateEnvField('api', envIndex, 'version', $event)"
-                      placeholder="ej. 1.2.0"
-                    />
-                  </div>
-                  <div class="form-field">
-                    <label [attr.for]="'nc-api-url-' + env.env">URL</label>
-                    <input
-                      [id]="'nc-api-url-' + env.env"
-                      type="url"
-                      [ngModel]="env.url"
-                      [name]="'apiUrl-' + env.env"
-                      (ngModelChange)="updateEnvField('api', envIndex, 'url', $event)"
                       placeholder="https://…"
                     />
                   </div>

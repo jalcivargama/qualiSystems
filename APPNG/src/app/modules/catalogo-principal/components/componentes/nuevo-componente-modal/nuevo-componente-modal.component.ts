@@ -13,12 +13,13 @@ import { TechnologiesService } from '../../../../tecnologia/components/tecnologi
 import { Technology } from '../../../../tecnologia/components/tecnologias/models/technology.model';
 import { ComponentTechnologiesService } from '../../../../tecnologia/components/stack-tecnologico/component-technologies.service';
 import { SystemDeploymentsService } from '../../../../operacion/components/despliegues/system-deployments.service';
+import { ApisService } from '../../apis/apis.service';
+import { ApiDetailRequest } from '../../apis/models/api-detail.model';
 import { SystemDetailsService } from '../../sistemas/system-details.service';
 import { SystemDetailRequest } from '../../sistemas/models/system-detail.model';
 import { ComponentsService } from '../components.service';
 import { CatalogComponent, ComponentRequest, ComponentType } from '../models/component.model';
 import {
-  AUTH_METHOD_OPTIONS,
   CRITICALITY_OPTIONS,
   DEPLOYMENT_ENVIRONMENTS,
   DeploymentEnvironment,
@@ -44,6 +45,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   private readonly technologiesService = inject(TechnologiesService);
   private readonly componentsService = inject(ComponentsService);
   private readonly systemDetailsService = inject(SystemDetailsService);
+  private readonly apisService = inject(ApisService);
   private readonly systemDeploymentsService = inject(SystemDeploymentsService);
   private readonly componentTechnologiesService = inject(ComponentTechnologiesService);
   private readonly toastService = inject(ToastService);
@@ -71,7 +73,6 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   readonly kindOptions = NUEVO_COMPONENTE_KIND_OPTIONS;
   readonly protocolOptions = PROTOCOL_OPTIONS;
-  readonly authMethodOptions = AUTH_METHOD_OPTIONS;
   readonly criticalityOptions = CRITICALITY_OPTIONS;
   readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
   readonly deploymentEnvironments = DEPLOYMENT_ENVIRONMENTS;
@@ -189,13 +190,12 @@ export class NuevoComponenteModalComponent implements OnInit {
   }
 
   updateEnvField(
-    target: 'frontend' | 'api',
+    target: 'frontend',
     envIndex: number,
     field: 'version' | 'url',
     value: string,
   ): void {
-    const source = target === 'frontend' ? this.frontend : this.api;
-    source.environments = source.environments.map((env, index) =>
+    this.frontend.environments = this.frontend.environments.map((env, index) =>
       index === envIndex ? { ...env, [field]: value } : env,
     );
   }
@@ -283,6 +283,38 @@ export class NuevoComponenteModalComponent implements OnInit {
       }
     }
 
+    if (kind === 'API') {
+      const apiVersion = this.api.apiVersion.trim();
+      const apiUrl = this.api.url.trim();
+      const protocol = this.api.protocol.trim();
+      const authenticationMethod = this.api.authenticationMethod.trim();
+
+      if (apiVersion.length > 50) {
+        this.formError.set('La versión de API no puede superar 50 caracteres.');
+        return;
+      }
+      if (apiUrl.length > 2000) {
+        this.formError.set('La URL de API no puede superar 2000 caracteres.');
+        return;
+      }
+      if (protocol.length > 30) {
+        this.formError.set('El protocolo no puede superar 30 caracteres.');
+        return;
+      }
+      if (authenticationMethod.length > 100) {
+        this.formError.set('El método de autenticación no puede superar 100 caracteres.');
+        return;
+      }
+
+      const invalidDeploymentUrl = this.deployments.some(
+        (deployment) => deployment.url.trim().length > 2000,
+      );
+      if (invalidDeploymentUrl) {
+        this.formError.set('La URL de despliegue no puede superar 2000 caracteres.');
+        return;
+      }
+    }
+
     const payload: NuevoComponenteForm = {
       kind,
       parentComponentId: null,
@@ -347,10 +379,21 @@ export class NuevoComponenteModalComponent implements OnInit {
       );
     }
 
-    if (payload.kind !== 'SYSTEM') {
-      return of(componentId);
+    if (payload.kind === 'SYSTEM') {
+      return this.saveSystemDetail(componentId, payload);
     }
 
+    if (payload.kind === 'API') {
+      return this.saveApiDetail(componentId, payload);
+    }
+
+    return of(componentId);
+  }
+
+  private saveSystemDetail(
+    componentId: number,
+    payload: NuevoComponenteForm,
+  ): Observable<number> {
     const ownerArea = payload.system.ownerArea.trim();
     const goLiveDate = payload.system.goLiveDate.trim();
     const endOfLifeDate = payload.system.endOfLifeDate.trim();
@@ -371,11 +414,31 @@ export class NuevoComponenteModalComponent implements OnInit {
       .pipe(switchMap(() => of(componentId)));
   }
 
+  private saveApiDetail(
+    componentId: number,
+    payload: NuevoComponenteForm,
+  ): Observable<number> {
+    const apiVersion = payload.api.apiVersion.trim();
+    const url = payload.api.url.trim();
+    const protocol = payload.api.protocol.trim();
+    const authenticationMethod = payload.api.authenticationMethod.trim();
+    const slaDescription = payload.api.slaDescription.trim();
+
+    const apiBody: ApiDetailRequest = { componentId };
+    if (apiVersion) apiBody.apiVersion = apiVersion;
+    if (url) apiBody.url = url;
+    if (protocol) apiBody.protocol = protocol;
+    if (authenticationMethod) apiBody.authenticationMethod = authenticationMethod;
+    if (slaDescription) apiBody.slaDescription = slaDescription;
+
+    return this.apisService.createApiDetail(apiBody).pipe(switchMap(() => of(componentId)));
+  }
+
   private saveDeployments(
     componentId: number,
     payload: NuevoComponenteForm,
   ): Observable<number> {
-    if (payload.kind !== 'SYSTEM') {
+    if (payload.kind !== 'SYSTEM' && payload.kind !== 'API') {
       return of(componentId);
     }
 
@@ -486,9 +549,11 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   private emptyApi() {
     return {
-      protocol: 'REST',
-      authenticationMethod: 'JWT',
-      environments: this.emptyEnvironments(),
+      apiVersion: '',
+      url: '',
+      protocol: '',
+      authenticationMethod: '',
+      slaDescription: '',
     };
   }
 
