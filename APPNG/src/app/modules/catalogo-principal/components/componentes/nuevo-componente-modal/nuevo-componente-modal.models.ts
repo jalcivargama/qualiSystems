@@ -1,3 +1,5 @@
+import { Criticality, SystemStatus } from '../../sistemas/models/system-detail.model';
+
 export type ActiveFlag = 'Y' | 'N';
 
 export type NuevoComponenteKind = 'SYSTEM' | 'FRONTEND' | 'API' | 'DATABASE';
@@ -28,6 +30,14 @@ export type DatabaseDetails = {
   jndiName: string;
 };
 
+export type SystemDetails = {
+  ownerArea: string;
+  criticality: Criticality | '';
+  systemStatus: SystemStatus;
+  goLiveDate: string;
+  endOfLifeDate: string;
+};
+
 export type NuevoComponenteForm = {
   kind: NuevoComponenteKind;
   parentComponentId: number | null;
@@ -36,7 +46,9 @@ export type NuevoComponenteForm = {
   acronym: string;
   description: string;
   responsiblePersonId: number | null;
+  responsibleRoleId: number | null;
   technologyIds: number[];
+  system: SystemDetails;
   frontend: FrontendDetails;
   api: ApiDetails;
   database: DatabaseDetails;
@@ -55,6 +67,20 @@ export const AUTH_METHOD_OPTIONS = [
   'API Key',
   'mTLS',
 ] as const;
+
+export const CRITICALITY_OPTIONS: { value: Criticality; label: string }[] = [
+  { value: 'LOW', label: 'BAJA' },
+  { value: 'MEDIUM', label: 'MEDIA' },
+  { value: 'HIGH', label: 'ALTA' },
+  { value: 'CRITICAL', label: 'CRÍTICA' },
+];
+
+export const SYSTEM_STATUS_OPTIONS: { value: SystemStatus; label: string }[] = [
+  { value: 'PLANNED', label: 'PLANIFICADO' },
+  { value: 'ACTIVE', label: 'ACTIVO' },
+  { value: 'DEPRECATED', label: 'DEPRECADO' },
+  { value: 'RETIRED', label: 'RETIRADO' },
+];
 
 export const NUEVO_COMPONENTE_KIND_OPTIONS: { value: NuevoComponenteKind; label: string }[] = [
   { value: 'SYSTEM', label: 'Sistema' },

@@ -136,6 +136,7 @@ export class ComponentesComponent implements OnInit {
 
   onNuevoComponenteSaved(_payload: NuevoComponenteForm): void {
     this.nuevoComponenteModalOpen.set(false);
+    this.loadComponents();
   }
 
   openEdit(row: ComponentRow): void {

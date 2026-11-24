@@ -2,21 +2,30 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, of, switchMap, throwError } from 'rxjs';
 import { ToastService } from '../../../../../core/toast.service';
 import { PeopleService } from '../../../../personas-y-roles/components/personas/people.service';
 import { Person } from '../../../../personas-y-roles/components/personas/models/person.model';
+import { ResponsibilityRolesService } from '../../../../personas-y-roles/components/roles-de-responsabilidad/responsibility-roles.service';
+import { ResponsibilityRole } from '../../../../personas-y-roles/components/roles-de-responsabilidad/models/responsibility-role.model';
+import { SystemResponsibilitiesService } from '../../../../personas-y-roles/components/responsables-de-sistemas/system-responsibilities.service';
 import { TechnologiesService } from '../../../../tecnologia/components/tecnologias/technologies.service';
 import { Technology } from '../../../../tecnologia/components/tecnologias/models/technology.model';
+import { ComponentTechnologiesService } from '../../../../tecnologia/components/stack-tecnologico/component-technologies.service';
+import { SystemDetailsService } from '../../sistemas/system-details.service';
+import { SystemDetailRequest } from '../../sistemas/models/system-detail.model';
 import { ComponentsService } from '../components.service';
-import { CatalogComponent } from '../models/component.model';
+import { CatalogComponent, ComponentRequest, ComponentType } from '../models/component.model';
 import {
   AUTH_METHOD_OPTIONS,
+  CRITICALITY_OPTIONS,
   ENVIRONMENT_CODES,
   EnvConfig,
   NUEVO_COMPONENTE_KIND_OPTIONS,
   NuevoComponenteForm,
   NuevoComponenteKind,
   PROTOCOL_OPTIONS,
+  SYSTEM_STATUS_OPTIONS,
 } from './nuevo-componente-modal.models';
 
 @Component({
@@ -27,8 +36,12 @@ import {
 })
 export class NuevoComponenteModalComponent implements OnInit {
   private readonly peopleService = inject(PeopleService);
+  private readonly responsibilityRolesService = inject(ResponsibilityRolesService);
+  private readonly systemResponsibilitiesService = inject(SystemResponsibilitiesService);
   private readonly technologiesService = inject(TechnologiesService);
   private readonly componentsService = inject(ComponentsService);
+  private readonly systemDetailsService = inject(SystemDetailsService);
+  private readonly componentTechnologiesService = inject(ComponentTechnologiesService);
   private readonly toastService = inject(ToastService);
 
   readonly open = input(false);
@@ -36,14 +49,15 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly saved = output<NuevoComponenteForm>();
 
   readonly people = signal<Person[]>([]);
+  readonly roles = signal<ResponsibilityRole[]>([]);
   readonly technologies = signal<Technology[]>([]);
-  readonly parentCandidates = signal<CatalogComponent[]>([]);
   readonly loadingCatalogs = signal(false);
+  readonly saving = signal(false);
   readonly formError = signal('');
 
   readonly kind = signal<NuevoComponenteKind | ''>('');
-  readonly parentComponentId = signal<number | null>(null);
   readonly responsiblePersonId = signal<number | null>(null);
+  readonly responsibleRoleId = signal<number | null>(null);
   readonly technologyIds = signal<number[]>([]);
 
   readonly activeFlagOptions = [
@@ -54,16 +68,14 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly kindOptions = NUEVO_COMPONENTE_KIND_OPTIONS;
   readonly protocolOptions = PROTOCOL_OPTIONS;
   readonly authMethodOptions = AUTH_METHOD_OPTIONS;
+  readonly criticalityOptions = CRITICALITY_OPTIONS;
+  readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
 
   form = this.emptyCommonForm();
+  system = this.emptySystem();
   frontend = this.emptyFrontend();
   api = this.emptyApi();
   database = this.emptyDatabase();
-
-  readonly requiresParent = computed(() => {
-    const kind = this.kind();
-    return kind !== '' && kind !== 'SYSTEM';
-  });
 
   readonly availablePeople = computed(() =>
     this.people().filter(
@@ -72,12 +84,8 @@ export class NuevoComponenteModalComponent implements OnInit {
     ),
   );
 
-  readonly parentOptions = computed(() =>
-    this.parentCandidates().filter((component) => {
-      const type = String(component.componentType ?? '').trim().toUpperCase();
-      const active = String(component.isActive ?? 'Y').trim().toUpperCase();
-      return type === 'SYSTEM' && active === 'Y' && component.componentId != null;
-    }),
+  readonly availableRoles = computed(() =>
+    this.roles().filter((role) => role.roleId != null),
   );
 
   readonly selectedTechnologies = computed(() => {
@@ -99,44 +107,37 @@ export class NuevoComponenteModalComponent implements OnInit {
   }
 
   close(): void {
+    if (this.saving()) return;
     this.reset();
     this.closed.emit();
   }
 
   reset(): void {
     this.kind.set('');
-    this.parentComponentId.set(null);
     this.responsiblePersonId.set(null);
+    this.responsibleRoleId.set(null);
     this.technologyIds.set([]);
     this.form = this.emptyCommonForm();
+    this.system = this.emptySystem();
     this.frontend = this.emptyFrontend();
     this.api = this.emptyApi();
     this.database = this.emptyDatabase();
     this.formError.set('');
+    this.saving.set(false);
   }
 
   onKindChange(kind: NuevoComponenteKind | ''): void {
     this.kind.set(kind);
     this.formError.set('');
-    if (kind === 'SYSTEM' || kind === '') {
-      this.parentComponentId.set(null);
-    }
     if (kind !== 'SYSTEM') {
       this.responsiblePersonId.set(null);
+      this.responsibleRoleId.set(null);
     }
+    this.system = this.emptySystem();
     this.frontend = this.emptyFrontend();
     this.api = this.emptyApi();
     this.database = this.emptyDatabase();
     this.technologyIds.set([]);
-  }
-
-  setParent(componentId: number | string | null): void {
-    if (componentId == null || componentId === '') {
-      this.parentComponentId.set(null);
-      return;
-    }
-    const id = Number(componentId);
-    this.parentComponentId.set(Number.isFinite(id) ? id : null);
   }
 
   setResponsible(personId: number | string | null): void {
@@ -148,16 +149,25 @@ export class NuevoComponenteModalComponent implements OnInit {
     this.responsiblePersonId.set(Number.isFinite(id) ? id : null);
   }
 
+  setResponsibleRole(roleId: number | string | null): void {
+    if (roleId == null || roleId === '') {
+      this.responsibleRoleId.set(null);
+      return;
+    }
+    const id = Number(roleId);
+    this.responsibleRoleId.set(Number.isFinite(id) ? id : null);
+  }
+
   personLabel(person: Person): string {
     const name = person.fullName?.trim() || String(person.personId ?? '—');
     const email = person.email?.trim();
     return email ? `${name} (${email})` : name;
   }
 
-  parentLabel(component: CatalogComponent): string {
-    const name = component.name?.trim() || String(component.componentId ?? '—');
-    const acronym = component.acronym?.trim();
-    return acronym ? `${name} (${acronym})` : name;
+  roleLabel(role: ResponsibilityRole): string {
+    const name = role.roleName?.trim() || String(role.roleId ?? '—');
+    const code = role.roleCode?.trim();
+    return code ? `${name} (${code})` : name;
   }
 
   toggleTechnology(technologyId: number): void {
@@ -183,9 +193,17 @@ export class NuevoComponenteModalComponent implements OnInit {
   }
 
   submit(): void {
+    if (this.saving()) return;
+
     const kind = this.kind();
     if (!kind) {
       this.formError.set('Selecciona el tipo de componente.');
+      return;
+    }
+
+    const componentType = this.mapKindToComponentType(kind);
+    if (!componentType) {
+      this.formError.set('Este tipo de componente aún no está listo para guardarse.');
       return;
     }
 
@@ -200,29 +218,175 @@ export class NuevoComponenteModalComponent implements OnInit {
       return;
     }
 
-    if (kind !== 'SYSTEM' && this.parentComponentId() == null) {
-      this.formError.set('Selecciona el componente padre.');
-      return;
+    const description = this.form.description.trim();
+    const acronym = this.form.acronym.trim();
+    const technologyIds = [...this.technologyIds()];
+
+    const responsiblePersonId = kind === 'SYSTEM' ? this.responsiblePersonId() : null;
+    const responsibleRoleId = kind === 'SYSTEM' ? this.responsibleRoleId() : null;
+
+    if (kind === 'SYSTEM') {
+      if (!this.system.systemStatus) {
+        this.formError.set('Selecciona el estado del sistema.');
+        return;
+      }
+
+      const ownerArea = this.system.ownerArea.trim();
+      if (ownerArea.length > 200) {
+        this.formError.set('El área propietaria no puede superar 200 caracteres.');
+        return;
+      }
+
+      const goLiveDate = this.system.goLiveDate.trim();
+      const endOfLifeDate = this.system.endOfLifeDate.trim();
+      if (goLiveDate && endOfLifeDate && endOfLifeDate < goLiveDate) {
+        this.formError.set(
+          'La fecha de fin de vida no puede ser anterior a la puesta en producción.',
+        );
+        return;
+      }
+
+      const hasPerson = responsiblePersonId != null;
+      const hasRole = responsibleRoleId != null;
+      if (hasPerson !== hasRole) {
+        this.formError.set('Para asignar responsable debes seleccionar persona y rol.');
+        return;
+      }
     }
 
-    this.formError.set('');
     const payload: NuevoComponenteForm = {
       kind,
-      parentComponentId: kind === 'SYSTEM' ? null : this.parentComponentId(),
+      parentComponentId: null,
       isActive: this.form.isActive,
       name,
-      acronym: this.form.acronym.trim(),
-      description: this.form.description.trim(),
-      responsiblePersonId: kind === 'SYSTEM' ? this.responsiblePersonId() : null,
-      technologyIds: [...this.technologyIds()],
+      acronym,
+      description,
+      responsiblePersonId,
+      responsibleRoleId,
+      technologyIds,
+      system: structuredClone(this.system),
       frontend: structuredClone(this.frontend),
       api: structuredClone(this.api),
       database: structuredClone(this.database),
     };
 
-    this.saved.emit(payload);
-    this.toastService.success('Formulario de nuevo componente listo');
-    this.close();
+    const componentBody: ComponentRequest = {
+      componentType,
+      name,
+      isActive: this.form.isActive,
+    };
+    if (acronym) componentBody.acronym = acronym;
+    if (description) componentBody.description = description;
+
+    this.formError.set('');
+    this.saving.set(true);
+
+    this.componentsService
+      .createNewComponent(componentBody)
+      .pipe(
+        switchMap((created) => this.afterComponentCreated(created, payload)),
+        switchMap((componentId) => this.saveSystemResponsibility(componentId, payload)),
+        switchMap((componentId) => this.saveTechnologyStack(componentId, technologyIds)),
+      )
+      .subscribe({
+        next: () => {
+          this.toastService.success('Componente creado correctamente');
+          this.saved.emit(payload);
+          this.reset();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveSaveError(error));
+        },
+      });
+  }
+
+  private afterComponentCreated(
+    created: CatalogComponent,
+    payload: NuevoComponenteForm,
+  ): Observable<number> {
+    const componentId = Number(created.componentId);
+    if (!Number.isFinite(componentId)) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 500,
+            statusText: 'El componente se creó sin identificador.',
+          }),
+      );
+    }
+
+    if (payload.kind !== 'SYSTEM') {
+      return of(componentId);
+    }
+
+    const ownerArea = payload.system.ownerArea.trim();
+    const goLiveDate = payload.system.goLiveDate.trim();
+    const endOfLifeDate = payload.system.endOfLifeDate.trim();
+    const businessObjective = payload.description.trim();
+
+    const systemBody: SystemDetailRequest = {
+      componentId,
+      systemStatus: payload.system.systemStatus,
+      goLiveDate: goLiveDate || null,
+      endOfLifeDate: endOfLifeDate || null,
+    };
+    if (businessObjective) systemBody.businessObjective = businessObjective;
+    if (ownerArea) systemBody.ownerArea = ownerArea;
+    if (payload.system.criticality) systemBody.criticality = payload.system.criticality;
+
+    return this.systemDetailsService
+      .createSystemDetail(systemBody)
+      .pipe(switchMap(() => of(componentId)));
+  }
+
+  private saveSystemResponsibility(
+    componentId: number,
+    payload: NuevoComponenteForm,
+  ): Observable<number> {
+    if (
+      payload.kind !== 'SYSTEM' ||
+      payload.responsiblePersonId == null ||
+      payload.responsibleRoleId == null
+    ) {
+      return of(componentId);
+    }
+
+    return this.systemResponsibilitiesService
+      .createSystemResponsibility({
+        componentId,
+        personId: payload.responsiblePersonId,
+        roleId: payload.responsibleRoleId,
+      })
+      .pipe(switchMap(() => of(componentId)));
+  }
+
+  private saveTechnologyStack(componentId: number, technologyIds: number[]): Observable<number> {
+    if (technologyIds.length === 0) {
+      return of(componentId);
+    }
+
+    return this.componentTechnologiesService
+      .createComponentTechnologiesBatch({
+        componentId,
+        technologies: technologyIds,
+        version: '',
+        isPrimary: 'N',
+      })
+      .pipe(switchMap(() => of(componentId)));
+  }
+
+  private mapKindToComponentType(kind: NuevoComponenteKind): ComponentType | null {
+    switch (kind) {
+      case 'SYSTEM':
+        return 'SYSTEM';
+      case 'API':
+        return 'API';
+      case 'DATABASE':
+        return 'DATABASE';
+      default:
+        return null;
+    }
   }
 
   private emptyCommonForm() {
@@ -231,6 +395,16 @@ export class NuevoComponenteModalComponent implements OnInit {
       name: '',
       acronym: '',
       description: '',
+    };
+  }
+
+  private emptySystem() {
+    return {
+      ownerArea: '',
+      criticality: '' as const,
+      systemStatus: 'ACTIVE' as const,
+      goLiveDate: '',
+      endOfLifeDate: '',
     };
   }
 
@@ -271,11 +445,11 @@ export class NuevoComponenteModalComponent implements OnInit {
       },
     });
 
-    this.componentsService.getComponents().subscribe({
-      next: (components) => this.parentCandidates.set(components ?? []),
+    this.responsibilityRolesService.getAllResponsibilityRoles().subscribe({
+      next: (roles) => this.roles.set(roles ?? []),
       error: (error: HttpErrorResponse) => {
-        this.parentCandidates.set([]);
-        this.toastService.error(this.resolveCatalogError(error, 'componentes'));
+        this.roles.set([]);
+        this.toastService.error(this.resolveCatalogError(error, 'roles'));
       },
     });
 
@@ -296,5 +470,23 @@ export class NuevoComponenteModalComponent implements OnInit {
     if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
     if (error.status === 403) return `No tienes autorización para consultar ${catalog}.`;
     return `No fue posible cargar el catálogo de ${catalog}.`;
+  }
+
+  private resolveSaveError(error: HttpErrorResponse): string {
+    const body = error.error;
+    if (body && typeof body === 'object' && typeof body.msg === 'string' && body.msg.trim()) {
+      return body.msg;
+    }
+    if (typeof body === 'string' && body.trim()) return body;
+    if (error.statusText && error.status === 500 && error.statusText.includes('identificador')) {
+      return error.statusText;
+    }
+    if (error.status === 401) return 'Sesión inválida o expirada. Vuelve a iniciar sesión.';
+    if (error.status === 403) return 'No tienes autorización para esta operación.';
+    if (error.status === 409) {
+      return 'Conflicto al guardar: el componente, detalle o stack ya existe.';
+    }
+    if (error.status === 400) return 'Datos inválidos. Revisa el formulario.';
+    return 'No fue posible completar el alta del componente.';
   }
 }

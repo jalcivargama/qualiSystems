@@ -34,24 +34,6 @@
             </select>
           </div>
 
-          @if (requiresParent()) {
-            <div class="form-field full-width">
-              <label for="nc-parent">Componente padre <i>*</i></label>
-              <select
-                id="nc-parent"
-                name="parentComponentId"
-                [ngModel]="parentComponentId()"
-                (ngModelChange)="setParent($event)"
-                required
-              >
-                <option [ngValue]="null">Selecciona el sistema padre…</option>
-                @for (parent of parentOptions(); track parent.componentId) {
-                  <option [ngValue]="parent.componentId">{{ parentLabel(parent) }}</option>
-                }
-              </select>
-            </div>
-          }
-
           @if (kind()) {
             <div class="form-field">
               <label for="nc-name">Nombre <i>*</i></label>
@@ -99,7 +81,7 @@
             </div>
 
             @if (kind() === 'SYSTEM') {
-              <div class="form-field full-width">
+              <div class="form-field">
                 <label for="nc-responsable">Responsable</label>
                 <select
                   id="nc-responsable"
@@ -113,9 +95,93 @@
                   }
                 </select>
               </div>
+
+              <div class="form-field">
+                <label for="nc-responsibility-role">Rol</label>
+                <select
+                  id="nc-responsibility-role"
+                  name="responsibleRoleId"
+                  [ngModel]="responsibleRoleId()"
+                  (ngModelChange)="setResponsibleRole($event)"
+                >
+                  <option [ngValue]="null">Selecciona un rol…</option>
+                  @for (role of availableRoles(); track role.roleId) {
+                    <option [ngValue]="role.roleId">{{ roleLabel(role) }}</option>
+                  }
+                </select>
+              </div>
             }
           }
         </div>
+
+        @if (kind() === 'SYSTEM') {
+          <div class="section-block">
+            <div class="section-title">Detalle de Sistema</div>
+            <p class="section-sub">Propiedad, criticidad y ciclo de vida. El objetivo se toma de la descripción.</p>
+
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="nc-system-status">Estado <i>*</i></label>
+                <select
+                  id="nc-system-status"
+                  name="systemStatus"
+                  [(ngModel)]="system.systemStatus"
+                  required
+                >
+                  @for (status of systemStatusOptions; track status.value) {
+                    <option [value]="status.value">{{ status.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-criticality">Criticidad</label>
+                <select
+                  id="nc-system-criticality"
+                  name="criticality"
+                  [(ngModel)]="system.criticality"
+                >
+                  <option value="">Sin definir</option>
+                  @for (option of criticalityOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-owner">Área propietaria</label>
+                <input
+                  id="nc-system-owner"
+                  name="ownerArea"
+                  type="text"
+                  [(ngModel)]="system.ownerArea"
+                  maxlength="200"
+                  placeholder="Ingresa área propietaria"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-golive">Puesta en producción</label>
+                <input
+                  id="nc-system-golive"
+                  name="goLiveDate"
+                  type="date"
+                  [(ngModel)]="system.goLiveDate"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-eol">Fin de vida</label>
+                <input
+                  id="nc-system-eol"
+                  name="endOfLifeDate"
+                  type="date"
+                  [(ngModel)]="system.endOfLifeDate"
+                />
+              </div>
+            </div>
+          </div>
+        }
 
         @if (kind() === 'FRONTEND') {
           <div class="section-block">
@@ -273,6 +339,7 @@
           <div class="section-block">
             <div class="section-title">Tecnologías</div>
             <p class="section-sub">Selecciona las tecnologías asociadas a este componente.</p>
+
             <div class="pills-wrap">
               <div class="pills">
                 @for (tech of selectedTechnologies(); track tech.technologyId) {
@@ -316,8 +383,12 @@
         }
 
         <div class="modal-actions">
-          <button type="button" class="secondary-button" (click)="close()">Cancelar</button>
-          <button type="submit" class="primary-button" [disabled]="!kind()">Crear registro</button>
+          <button type="button" class="secondary-button" (click)="close()" [disabled]="saving()">
+            Cancelar
+          </button>
+          <button type="submit" class="primary-button" [disabled]="!kind() || saving()">
+            {{ saving() ? 'Creando...' : 'Crear registro' }}
+          </button>
         </div>
       </form>
     </section>

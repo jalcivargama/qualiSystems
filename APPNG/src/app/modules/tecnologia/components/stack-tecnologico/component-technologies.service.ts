@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   ComponentTechnology,
+  ComponentTechnologyBatchRequest,
   ComponentTechnologyUpdateRequest,
 } from './models/component-technology.model';
 
@@ -19,6 +20,15 @@ export class ComponentTechnologiesService {
 
   createComponentTechnology(body: ComponentTechnology): Observable<ComponentTechnology> {
     return this.http.post<ComponentTechnology>(
+      `${this.baseUrl}/catalogos/component-technologies`,
+      body,
+    );
+  }
+
+  createComponentTechnologiesBatch(
+    body: ComponentTechnologyBatchRequest,
+  ): Observable<ComponentTechnology | ComponentTechnology[]> {
+    return this.http.post<ComponentTechnology | ComponentTechnology[]>(
       `${this.baseUrl}/catalogos/component-technologies`,
       body,
     );
