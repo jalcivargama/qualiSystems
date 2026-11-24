@@ -441,6 +441,88 @@ tbody tr:hover {
 .form-field textarea::placeholder {
   color: #b1bab4;
 }
+.tech-block {
+  margin-top: 16px;
+}
+.tech-block-title {
+  font-size: 11px;
+  font-weight: 650;
+  color: #20332b;
+  margin-bottom: 4px;
+}
+.tech-block-title i {
+  font-style: normal;
+  color: #b46458;
+}
+.tech-block-sub {
+  font-size: 10px;
+  color: #8a9790;
+  margin: 0 0 10px;
+}
+.pills-wrap {
+  border: 1px solid #e1e7e2;
+  border-radius: 6px;
+  padding: 10px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff4e9;
+  color: #294b3e;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px 4px 10px;
+  border-radius: 999px;
+}
+.pill button {
+  border: none;
+  background: transparent;
+  color: #294b3e;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+}
+.pill button:hover {
+  opacity: 1;
+}
+.pill-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pill-option {
+  font: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px dashed #d5ddd7;
+  background: #fff;
+  color: #6c7971;
+  cursor: pointer;
+}
+.pill-option:hover {
+  border-color: #557b48;
+  color: #294b3e;
+  background: #eff4e9;
+}
+.empty-hint {
+  font-size: 10px;
+  color: #8a9790;
+  margin: 0;
+}
 .modal-actions {
   display: flex;
   justify-content: flex-end;

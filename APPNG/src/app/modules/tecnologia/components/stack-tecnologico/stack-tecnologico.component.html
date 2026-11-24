@@ -107,12 +107,12 @@
       <div class="modal-heading">
         <div>
           <span class="panel-kicker">component_technology</span>
-          <h2>{{ isEditing() ? 'Editar tecnología de componente' : 'Nueva tecnología de componente' }}</h2>
+          <h2>{{ isEditing() ? 'Editar tecnología de componente' : 'Nuevo stack tecnológico' }}</h2>
           <p>
             {{
               isEditing()
                 ? 'Actualiza la versión y si es la tecnología principal. La clave no se puede cambiar.'
-                : 'Asocia una tecnología a un componente y define su versión.'
+                : 'Asocia una o varias tecnologías a un componente.'
             }}
           </p>
         </div>
@@ -138,39 +138,39 @@
             </select>
           </div>
 
-          <div class="form-field">
-            <label for="field-technologyId">Tecnología <i>*</i></label>
-            <select
-              id="field-technologyId"
-              name="technologyId"
-              [ngModel]="form.technologyId"
-              (ngModelChange)="onTechnologyIdChange($event)"
-              required
-              [disabled]="isEditing() || form.componentId == null"
-            >
-              <option [ngValue]="null">Selecciona una tecnología</option>
-              @for (technology of availableTechnologies(); track technology.technologyId) {
-                <option [ngValue]="+technology.technologyId!">
-                  {{ technologyOptionLabel(technology) }}
-                </option>
-              }
-            </select>
-            @if (!isEditing()) {
-              <small class="field-hint">Solo tecnologías aún no asociadas a ese componente.</small>
-            }
-          </div>
+          @if (isEditing()) {
+            <div class="form-field">
+              <label for="field-technologyId">Tecnología <i>*</i></label>
+              <select
+                id="field-technologyId"
+                name="technologyId"
+                [ngModel]="form.technologyId"
+                required
+                disabled
+              >
+                <option [ngValue]="null">Selecciona una tecnología</option>
+                @for (technology of technologies(); track technology.technologyId) {
+                  <option [ngValue]="+technology.technologyId!">
+                    {{ technologyOptionLabel(technology) }}
+                  </option>
+                }
+              </select>
+            </div>
+          }
 
-          <div class="form-field">
-            <label for="field-version">Versión</label>
-            <input
-              id="field-version"
-              name="version"
-              type="text"
-              [(ngModel)]="form.version"
-              maxlength="100"
-              placeholder="Ej. 3.2.0"
-            />
-          </div>
+          @if (isEditing()) {
+            <div class="form-field">
+              <label for="field-version">Versión</label>
+              <input
+                id="field-version"
+                name="version"
+                type="text"
+                [(ngModel)]="form.version"
+                maxlength="100"
+                placeholder="Ej. 3.2.0"
+              />
+            </div>
+          }
 
           <div class="form-field">
             <label for="field-isPrimary">Principal <i>*</i></label>
@@ -181,6 +181,50 @@
             </select>
           </div>
         </div>
+
+        @if (!isEditing()) {
+          <div class="tech-block">
+            <div class="tech-block-title">Tecnologías <i>*</i></div>
+            <p class="tech-block-sub">Selecciona una o varias tecnologías aún no asociadas al componente.</p>
+            <div class="pills-wrap">
+              <div class="pills">
+                @for (technology of selectedTechnologies(); track technology.technologyId) {
+                  <span class="pill">
+                    {{ technology.name }}
+                    <button
+                      type="button"
+                      aria-label="Quitar tecnología"
+                      (click)="removeTechnology(technology.technologyId!)"
+                    >
+                      ×
+                    </button>
+                  </span>
+                }
+              </div>
+              <div class="pill-options">
+                @if (form.componentId == null) {
+                  <span class="empty-hint">Primero selecciona un componente.</span>
+                } @else {
+                  @for (technology of availableTechnologies(); track technology.technologyId) {
+                    <button
+                      type="button"
+                      class="pill-option"
+                      (click)="toggleTechnology(technology.technologyId!)"
+                    >
+                      {{ technologyOptionLabel(technology) }}
+                    </button>
+                  } @empty {
+                    @if (technologies().length === 0) {
+                      <span class="empty-hint">No hay tecnologías en el catálogo.</span>
+                    } @else {
+                      <span class="empty-hint">No hay tecnologías disponibles para este componente.</span>
+                    }
+                  }
+                }
+              </div>
+            </div>
+          </div>
+        }
 
         @if (formError()) {
           <div class="error-banner" role="alert">{{ formError() }}</div>
