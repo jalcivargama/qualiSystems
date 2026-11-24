@@ -177,7 +177,9 @@
               type="text"
               [(ngModel)]="form.instanceName"
               maxlength="200"
-              placeholder="Ej. PRODDB"
+              placeholder="ej. proddb"
+              (keydown)="transformToLowerCase($event, 200)"
+              (paste)="transformPasteToLower($event, 200)"
             />
           </div>
 

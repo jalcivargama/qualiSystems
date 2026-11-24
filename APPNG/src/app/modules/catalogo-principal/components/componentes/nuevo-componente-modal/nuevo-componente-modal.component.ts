@@ -22,6 +22,10 @@ import { SystemDetailRequest } from '../../sistemas/models/system-detail.model';
 import { ComponentsService } from '../components.service';
 import { CatalogComponent, ComponentRequest, ComponentType } from '../models/component.model';
 import {
+  transformInputToLowerCase,
+  transformPasteToLowerCase,
+} from '../../../../../shared/functions/input.functions';
+import {
   CRITICALITY_OPTIONS,
   DEPLOYMENT_ENVIRONMENTS,
   DeploymentEnvironment,
@@ -79,6 +83,8 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly criticalityOptions = CRITICALITY_OPTIONS;
   readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
   readonly deploymentEnvironments = DEPLOYMENT_ENVIRONMENTS;
+  readonly transformToLowerCase = transformInputToLowerCase;
+  readonly transformPasteToLower = transformPasteToLowerCase;
 
   form = this.emptyCommonForm();
   system = this.emptySystem();
@@ -321,8 +327,9 @@ export class NuevoComponenteModalComponent implements OnInit {
     if (kind === 'DATABASE') {
       const engine = this.database.engine.trim();
       const engineVersion = this.database.engineVersion.trim();
-      const instanceName = this.database.instanceName.trim();
+      const instanceName = this.database.instanceName.trim().toLowerCase();
       const schemaName = this.database.schemaName.trim();
+      this.database.instanceName = instanceName;
 
       if (!engine) {
         this.formError.set('El motor de base de datos es obligatorio.');
@@ -475,7 +482,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   ): Observable<number> {
     const engine = payload.database.engine.trim();
     const engineVersion = payload.database.engineVersion.trim();
-    const instanceName = payload.database.instanceName.trim();
+    const instanceName = payload.database.instanceName.trim().toLowerCase();
     const schemaName = payload.database.schemaName.trim();
 
     const databaseBody: DatabaseDetailRequest = { componentId, engine };
