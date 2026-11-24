@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, switchMap, throwError } from 'rxjs';
+import { forkJoin, Observable, of, switchMap, throwError } from 'rxjs';
 import { ToastService } from '../../../../../core/toast.service';
 import { PeopleService } from '../../../../personas-y-roles/components/personas/people.service';
 import { Person } from '../../../../personas-y-roles/components/personas/models/person.model';
@@ -12,6 +12,7 @@ import { SystemResponsibilitiesService } from '../../../../personas-y-roles/comp
 import { TechnologiesService } from '../../../../tecnologia/components/tecnologias/technologies.service';
 import { Technology } from '../../../../tecnologia/components/tecnologias/models/technology.model';
 import { ComponentTechnologiesService } from '../../../../tecnologia/components/stack-tecnologico/component-technologies.service';
+import { SystemDeploymentsService } from '../../../../operacion/components/despliegues/system-deployments.service';
 import { SystemDetailsService } from '../../sistemas/system-details.service';
 import { SystemDetailRequest } from '../../sistemas/models/system-detail.model';
 import { ComponentsService } from '../components.service';
@@ -19,6 +20,8 @@ import { CatalogComponent, ComponentRequest, ComponentType } from '../models/com
 import {
   AUTH_METHOD_OPTIONS,
   CRITICALITY_OPTIONS,
+  DEPLOYMENT_ENVIRONMENTS,
+  DeploymentEnvironment,
   ENVIRONMENT_CODES,
   EnvConfig,
   NUEVO_COMPONENTE_KIND_OPTIONS,
@@ -41,6 +44,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   private readonly technologiesService = inject(TechnologiesService);
   private readonly componentsService = inject(ComponentsService);
   private readonly systemDetailsService = inject(SystemDetailsService);
+  private readonly systemDeploymentsService = inject(SystemDeploymentsService);
   private readonly componentTechnologiesService = inject(ComponentTechnologiesService);
   private readonly toastService = inject(ToastService);
 
@@ -70,9 +74,11 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly authMethodOptions = AUTH_METHOD_OPTIONS;
   readonly criticalityOptions = CRITICALITY_OPTIONS;
   readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
+  readonly deploymentEnvironments = DEPLOYMENT_ENVIRONMENTS;
 
   form = this.emptyCommonForm();
   system = this.emptySystem();
+  deployments = this.emptyDeployments();
   frontend = this.emptyFrontend();
   api = this.emptyApi();
   database = this.emptyDatabase();
@@ -119,6 +125,7 @@ export class NuevoComponenteModalComponent implements OnInit {
     this.technologyIds.set([]);
     this.form = this.emptyCommonForm();
     this.system = this.emptySystem();
+    this.deployments = this.emptyDeployments();
     this.frontend = this.emptyFrontend();
     this.api = this.emptyApi();
     this.database = this.emptyDatabase();
@@ -134,6 +141,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       this.responsibleRoleId.set(null);
     }
     this.system = this.emptySystem();
+    this.deployments = this.emptyDeployments();
     this.frontend = this.emptyFrontend();
     this.api = this.emptyApi();
     this.database = this.emptyDatabase();
@@ -189,6 +197,19 @@ export class NuevoComponenteModalComponent implements OnInit {
     const source = target === 'frontend' ? this.frontend : this.api;
     source.environments = source.environments.map((env, index) =>
       index === envIndex ? { ...env, [field]: value } : env,
+    );
+  }
+
+  updateDeploymentUrl(index: number, url: string): void {
+    this.deployments = this.deployments.map((deployment, depIndex) =>
+      depIndex === index ? { ...deployment, url } : deployment,
+    );
+  }
+
+  deploymentLabel(environment: DeploymentEnvironment): string {
+    return (
+      this.deploymentEnvironments.find((option) => option.value === environment)?.label ??
+      environment
     );
   }
 
@@ -252,6 +273,14 @@ export class NuevoComponenteModalComponent implements OnInit {
         this.formError.set('Para asignar responsable debes seleccionar persona y rol.');
         return;
       }
+
+      const invalidDeploymentUrl = this.deployments.some(
+        (deployment) => deployment.url.trim().length > 2000,
+      );
+      if (invalidDeploymentUrl) {
+        this.formError.set('La URL de despliegue no puede superar 2000 caracteres.');
+        return;
+      }
     }
 
     const payload: NuevoComponenteForm = {
@@ -265,6 +294,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       responsibleRoleId,
       technologyIds,
       system: structuredClone(this.system),
+      deployments: structuredClone(this.deployments),
       frontend: structuredClone(this.frontend),
       api: structuredClone(this.api),
       database: structuredClone(this.database),
@@ -285,6 +315,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       .createNewComponent(componentBody)
       .pipe(
         switchMap((created) => this.afterComponentCreated(created, payload)),
+        switchMap((componentId) => this.saveDeployments(componentId, payload)),
         switchMap((componentId) => this.saveSystemResponsibility(componentId, payload)),
         switchMap((componentId) => this.saveTechnologyStack(componentId, technologyIds)),
       )
@@ -338,6 +369,36 @@ export class NuevoComponenteModalComponent implements OnInit {
     return this.systemDetailsService
       .createSystemDetail(systemBody)
       .pipe(switchMap(() => of(componentId)));
+  }
+
+  private saveDeployments(
+    componentId: number,
+    payload: NuevoComponenteForm,
+  ): Observable<number> {
+    if (payload.kind !== 'SYSTEM') {
+      return of(componentId);
+    }
+
+    const toCreate = payload.deployments
+      .map((deployment) => ({
+        environment: deployment.environment,
+        url: deployment.url.trim(),
+      }))
+      .filter((deployment) => deployment.url.length > 0);
+
+    if (toCreate.length === 0) {
+      return of(componentId);
+    }
+
+    return forkJoin(
+      toCreate.map((deployment) =>
+        this.systemDeploymentsService.createSystemDeployment({
+          componentId,
+          environment: deployment.environment,
+          url: deployment.url,
+        }),
+      ),
+    ).pipe(switchMap(() => of(componentId)));
   }
 
   private saveSystemResponsibility(
@@ -406,6 +467,13 @@ export class NuevoComponenteModalComponent implements OnInit {
       goLiveDate: '',
       endOfLifeDate: '',
     };
+  }
+
+  private emptyDeployments() {
+    return DEPLOYMENT_ENVIRONMENTS.map((option) => ({
+      environment: option.value,
+      url: '',
+    }));
   }
 
   private emptyEnvironments(): EnvConfig[] {

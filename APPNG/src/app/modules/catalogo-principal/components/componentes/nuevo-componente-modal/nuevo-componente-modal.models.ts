@@ -1,4 +1,5 @@
 import { Criticality, SystemStatus } from '../../sistemas/models/system-detail.model';
+import { Environment } from '../../../../operacion/components/despliegues/models/system-deployment.model';
 
 export type ActiveFlag = 'Y' | 'N';
 
@@ -6,9 +7,16 @@ export type NuevoComponenteKind = 'SYSTEM' | 'FRONTEND' | 'API' | 'DATABASE';
 
 export type EnvironmentCode = 'DEV' | 'QA' | 'PROD';
 
+export type DeploymentEnvironment = Extract<Environment, 'DEVELOPMENT' | 'QA' | 'PRODUCTION'>;
+
 export type EnvConfig = {
   env: EnvironmentCode;
   version: string;
+  url: string;
+};
+
+export type DeploymentConfig = {
+  environment: DeploymentEnvironment;
   url: string;
 };
 
@@ -49,12 +57,22 @@ export type NuevoComponenteForm = {
   responsibleRoleId: number | null;
   technologyIds: number[];
   system: SystemDetails;
+  deployments: DeploymentConfig[];
   frontend: FrontendDetails;
   api: ApiDetails;
   database: DatabaseDetails;
 };
 
 export const ENVIRONMENT_CODES: EnvironmentCode[] = ['DEV', 'QA', 'PROD'];
+
+export const DEPLOYMENT_ENVIRONMENTS: {
+  value: DeploymentEnvironment;
+  label: string;
+}[] = [
+  { value: 'DEVELOPMENT', label: 'DESARROLLO' },
+  { value: 'QA', label: 'QA' },
+  { value: 'PRODUCTION', label: 'PRODUCCIÓN' },
+];
 
 export const PROTOCOL_OPTIONS = ['REST', 'SOAP', 'GraphQL', 'gRPC', 'Otro'] as const;
 
@@ -84,7 +102,6 @@ export const SYSTEM_STATUS_OPTIONS: { value: SystemStatus; label: string }[] = [
 
 export const NUEVO_COMPONENTE_KIND_OPTIONS: { value: NuevoComponenteKind; label: string }[] = [
   { value: 'SYSTEM', label: 'Sistema' },
-  { value: 'FRONTEND', label: 'Frontend' },
   { value: 'API', label: 'API' },
   { value: 'DATABASE', label: 'Base de Datos' },
 ];

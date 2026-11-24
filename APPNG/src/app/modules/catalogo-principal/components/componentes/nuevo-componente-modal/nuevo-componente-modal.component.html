@@ -181,6 +181,30 @@
               </div>
             </div>
           </div>
+
+          <div class="section-block">
+            <div class="section-title">Despliegues</div>
+            <p class="section-sub">URL por ambiente. Solo se guardan los ambientes con URL.</p>
+            <div class="env-grid">
+              @for (dep of deployments; track dep.environment; let depIndex = $index) {
+                <div class="env-card">
+                  <span class="env-badge">{{ deploymentLabel(dep.environment) }}</span>
+                  <div class="form-field">
+                    <label [attr.for]="'nc-deploy-url-' + dep.environment">URL</label>
+                    <input
+                      [id]="'nc-deploy-url-' + dep.environment"
+                      type="url"
+                      [ngModel]="dep.url"
+                      [name]="'deployUrl-' + dep.environment"
+                      (ngModelChange)="updateDeploymentUrl(depIndex, $event)"
+                      maxlength="2000"
+                      placeholder="https://…"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
         }
 
         @if (kind() === 'FRONTEND') {
