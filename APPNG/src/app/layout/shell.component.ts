@@ -62,6 +62,7 @@ export class ShellComponent {
         { label: 'Dependencias', route: '/catalogos/dependency' },
         { label: 'Flujos de datos', route: '/catalogos/data_flow' },
         { label: 'Despliegues', route: '/catalogos/system_deployment' },
+        { label: 'Responsables de sistemas', route: '/catalogos/system_responsibility' },
       ],
     },
   ];
