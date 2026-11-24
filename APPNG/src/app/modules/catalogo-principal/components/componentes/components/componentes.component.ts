@@ -67,6 +67,7 @@ export class ComponentesComponent implements OnInit {
   readonly rows = signal<ComponentRow[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly selectedType = signal<ComponentType | ''>('');
   readonly modalOpen = signal(false);
   readonly nuevoSistemaModalOpen = signal(false);
   readonly nuevoComponenteModalOpen = signal(false);
@@ -79,8 +80,17 @@ export class ComponentesComponent implements OnInit {
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
-    const rows = this.rows();
+    const type = this.selectedType();
+    let rows = this.rows();
+
+    if (type) {
+      rows = rows.filter(
+        (row) => String(row.componentType ?? '').trim().toUpperCase() === type,
+      );
+    }
+
     if (!query) return rows;
+
     return rows.filter((row) =>
       [
         this.labelForComponentType(row.componentType),
@@ -164,6 +174,7 @@ export class ComponentesComponent implements OnInit {
 
   clearSearch(): void {
     this.searchTerm.set('');
+    this.selectedType.set('');
   }
 
   deleteCurrent(): void {

@@ -112,6 +112,34 @@ fieldset {
   align-items: center;
   gap: 8px;
 }
+.type-filter-box {
+  height: 31px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid #e6ebe7;
+  border-radius: 5px;
+  color: #738078;
+  background: #fff;
+}
+.type-filter-box > span {
+  font-size: 9px;
+  font-weight: 600;
+  color: #738078;
+  white-space: nowrap;
+}
+.type-filter-box select {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 9px;
+  color: #425148;
+  min-width: 120px;
+  max-width: 170px;
+  cursor: pointer;
+}
 .search-box {
   height: 31px;
   width: 224px;
@@ -541,9 +569,17 @@ tbody tr:hover {
   }
   .toolbar-actions {
     width: 100%;
+    flex-wrap: wrap;
+  }
+  .type-filter-box {
+    flex: 1 1 140px;
+  }
+  .type-filter-box select {
+    max-width: none;
+    width: 100%;
   }
   .search-box {
-    flex: 1;
+    flex: 1 1 180px;
   }
   .catalog-count {
     gap: 6px;
