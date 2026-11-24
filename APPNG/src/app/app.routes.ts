@@ -48,6 +48,7 @@ export const routes: Routes = [
       { path: 'catalogos/person', component: PersonasComponent },
       { path: 'catalogos/responsibility_role', component: RolesDeResponsabilidadComponent },
       { path: 'catalogos/system_responsibility', component: ResponsablesDeSistemasComponent },
+      { path: 'system_responsibility', component: ResponsablesDeSistemasComponent },
       { path: 'catalogos/technology', component: TecnologiasComponent },
       { path: 'catalogos/component_technology', component: StackTecnologicoComponent },
       { path: 'catalogos/dependency_type', component: TiposDeDependenciaComponent },

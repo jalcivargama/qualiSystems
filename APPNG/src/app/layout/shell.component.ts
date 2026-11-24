@@ -47,6 +47,7 @@ export class ShellComponent {
       items: [
         { label: 'Componentes', route: '/catalogos/catalog_component' },
         { label: 'Sistemas', route: '/catalogos/system_detail' },
+        { label: 'Responsables de sistema', route: '/system_responsibility' },
         { label: 'APIs', route: '/catalogos/api_detail' },
         { label: 'Bases de datos', route: '/catalogos/database_detail' },
         { label: 'Infraestructura', route: '/catalogos/infrastructure_detail' },
