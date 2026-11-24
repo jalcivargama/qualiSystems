@@ -15,6 +15,8 @@ import { ComponentTechnologiesService } from '../../../../tecnologia/components/
 import { SystemDeploymentsService } from '../../../../operacion/components/despliegues/system-deployments.service';
 import { ApisService } from '../../apis/apis.service';
 import { ApiDetailRequest } from '../../apis/models/api-detail.model';
+import { DatabaseDetailsService } from '../../bases-de-datos/database-details.service';
+import { DatabaseDetailRequest } from '../../bases-de-datos/models/database-detail.model';
 import { SystemDetailsService } from '../../sistemas/system-details.service';
 import { SystemDetailRequest } from '../../sistemas/models/system-detail.model';
 import { ComponentsService } from '../components.service';
@@ -46,6 +48,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   private readonly componentsService = inject(ComponentsService);
   private readonly systemDetailsService = inject(SystemDetailsService);
   private readonly apisService = inject(ApisService);
+  private readonly databaseDetailsService = inject(DatabaseDetailsService);
   private readonly systemDeploymentsService = inject(SystemDeploymentsService);
   private readonly componentTechnologiesService = inject(ComponentTechnologiesService);
   private readonly toastService = inject(ToastService);
@@ -315,6 +318,34 @@ export class NuevoComponenteModalComponent implements OnInit {
       }
     }
 
+    if (kind === 'DATABASE') {
+      const engine = this.database.engine.trim();
+      const engineVersion = this.database.engineVersion.trim();
+      const instanceName = this.database.instanceName.trim();
+      const schemaName = this.database.schemaName.trim();
+
+      if (!engine) {
+        this.formError.set('El motor de base de datos es obligatorio.');
+        return;
+      }
+      if (engine.length > 100) {
+        this.formError.set('El motor no puede superar 100 caracteres.');
+        return;
+      }
+      if (engineVersion.length > 100) {
+        this.formError.set('La versión no puede superar 100 caracteres.');
+        return;
+      }
+      if (instanceName.length > 200) {
+        this.formError.set('La instancia no puede superar 200 caracteres.');
+        return;
+      }
+      if (schemaName.length > 200) {
+        this.formError.set('El esquema no puede superar 200 caracteres.');
+        return;
+      }
+    }
+
     const payload: NuevoComponenteForm = {
       kind,
       parentComponentId: null,
@@ -387,6 +418,10 @@ export class NuevoComponenteModalComponent implements OnInit {
       return this.saveApiDetail(componentId, payload);
     }
 
+    if (payload.kind === 'DATABASE') {
+      return this.saveDatabaseDetail(componentId, payload);
+    }
+
     return of(componentId);
   }
 
@@ -432,6 +467,25 @@ export class NuevoComponenteModalComponent implements OnInit {
     if (slaDescription) apiBody.slaDescription = slaDescription;
 
     return this.apisService.createApiDetail(apiBody).pipe(switchMap(() => of(componentId)));
+  }
+
+  private saveDatabaseDetail(
+    componentId: number,
+    payload: NuevoComponenteForm,
+  ): Observable<number> {
+    const engine = payload.database.engine.trim();
+    const engineVersion = payload.database.engineVersion.trim();
+    const instanceName = payload.database.instanceName.trim();
+    const schemaName = payload.database.schemaName.trim();
+
+    const databaseBody: DatabaseDetailRequest = { componentId, engine };
+    if (engineVersion) databaseBody.engineVersion = engineVersion;
+    if (instanceName) databaseBody.instanceName = instanceName;
+    if (schemaName) databaseBody.schemaName = schemaName;
+
+    return this.databaseDetailsService
+      .createDatabaseDetail(databaseBody)
+      .pipe(switchMap(() => of(componentId)));
   }
 
   private saveDeployments(
@@ -563,7 +617,6 @@ export class NuevoComponenteModalComponent implements OnInit {
       engineVersion: '',
       instanceName: '',
       schemaName: '',
-      jndiName: '',
     };
   }
 

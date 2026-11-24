@@ -315,17 +315,19 @@
         @if (kind() === 'DATABASE') {
           <div class="section-block">
             <div class="section-title">Detalle Base de Datos</div>
-            <p class="section-sub">Motor, instancia y acceso.</p>
+            <p class="section-sub">Motor, versión, instancia y esquema.</p>
 
             <div class="form-grid">
               <div class="form-field">
-                <label for="nc-db-engine">Motor</label>
+                <label for="nc-db-engine">Motor <i>*</i></label>
                 <input
                   id="nc-db-engine"
                   name="dbEngine"
                   type="text"
                   [(ngModel)]="database.engine"
-                  placeholder="Oracle, PostgreSQL…"
+                  maxlength="100"
+                  required
+                  placeholder="Ej. Oracle"
                 />
               </div>
               <div class="form-field">
@@ -335,7 +337,8 @@
                   name="dbVersion"
                   type="text"
                   [(ngModel)]="database.engineVersion"
-                  placeholder="ej. 19c"
+                  maxlength="100"
+                  placeholder="Ej. 19c"
                 />
               </div>
               <div class="form-field">
@@ -345,7 +348,8 @@
                   name="dbInstance"
                   type="text"
                   [(ngModel)]="database.instanceName"
-                  placeholder="Nombre de instancia"
+                  maxlength="200"
+                  placeholder="Ej. PRODDB"
                 />
               </div>
               <div class="form-field">
@@ -355,17 +359,8 @@
                   name="dbSchema"
                   type="text"
                   [(ngModel)]="database.schemaName"
-                  placeholder="SCHEMA_APP"
-                />
-              </div>
-              <div class="form-field full-width">
-                <label for="nc-db-jndi">Nombre JNDI</label>
-                <input
-                  id="nc-db-jndi"
-                  name="dbJndi"
-                  type="text"
-                  [(ngModel)]="database.jndiName"
-                  placeholder="jdbc/MiDatasource"
+                  maxlength="200"
+                  placeholder="Ej. CATSYS"
                 />
               </div>
             </div>

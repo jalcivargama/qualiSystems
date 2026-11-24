@@ -37,7 +37,6 @@ export type DatabaseDetails = {
   engineVersion: string;
   instanceName: string;
   schemaName: string;
-  jndiName: string;
 };
 
 export type SystemDetails = {
