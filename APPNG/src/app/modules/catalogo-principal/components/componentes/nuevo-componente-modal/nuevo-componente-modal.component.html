@@ -1,0 +1,430 @@
+@if (open()) {
+  <div class="modal-backdrop" (click)="close()">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Nuevo componente"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">catalog_component</span>
+          <h2>Nuevo componente</h2>
+          <p>Registra un solo componente. El tipo define los campos disponibles.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="close()">×</button>
+      </div>
+
+      <form (ngSubmit)="submit()">
+        <div class="form-grid">
+          <div class="form-field full-width">
+            <label for="nc-kind">Tipo <i>*</i></label>
+            <select
+              id="nc-kind"
+              name="kind"
+              [ngModel]="kind()"
+              (ngModelChange)="onKindChange($event)"
+              required
+            >
+              <option value="">Selecciona tipo…</option>
+              @for (option of kindOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          @if (kind()) {
+            <div class="form-field">
+              <label for="nc-name">Nombre <i>*</i></label>
+              <input
+                id="nc-name"
+                name="name"
+                type="text"
+                [(ngModel)]="form.name"
+                required
+                maxlength="200"
+                placeholder="Ingresa nombre"
+              />
+            </div>
+
+            <div class="form-field">
+              <label for="nc-isActive">Activo <i>*</i></label>
+              <select id="nc-isActive" name="isActive" [(ngModel)]="form.isActive" required>
+                @for (flag of activeFlagOptions; track flag.value) {
+                  <option [value]="flag.value">{{ flag.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="form-field">
+              <label for="nc-acronym">Acrónimo</label>
+              <input
+                id="nc-acronym"
+                name="acronym"
+                type="text"
+                [(ngModel)]="form.acronym"
+                maxlength="50"
+                placeholder="Ingresa acrónimo"
+              />
+            </div>
+
+            <div class="form-field full-width">
+              <label for="nc-description">Descripción</label>
+              <textarea
+                id="nc-description"
+                name="description"
+                [(ngModel)]="form.description"
+                rows="3"
+                placeholder="Describe el componente"
+              ></textarea>
+            </div>
+
+            @if (kind() === 'SYSTEM') {
+              <div class="form-field">
+                <label for="nc-responsable">Responsable</label>
+                <select
+                  id="nc-responsable"
+                  name="responsable"
+                  [ngModel]="responsiblePersonId()"
+                  (ngModelChange)="setResponsible($event)"
+                >
+                  <option [ngValue]="null">Selecciona un responsable…</option>
+                  @for (person of availablePeople(); track person.personId) {
+                    <option [ngValue]="person.personId">{{ personLabel(person) }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="nc-responsibility-role">Rol</label>
+                <select
+                  id="nc-responsibility-role"
+                  name="responsibleRoleId"
+                  [ngModel]="responsibleRoleId()"
+                  (ngModelChange)="setResponsibleRole($event)"
+                >
+                  <option [ngValue]="null">Selecciona un rol…</option>
+                  @for (role of availableRoles(); track role.roleId) {
+                    <option [ngValue]="role.roleId">{{ roleLabel(role) }}</option>
+                  }
+                </select>
+              </div>
+            }
+          }
+        </div>
+
+        @if (kind() === 'SYSTEM') {
+          <div class="section-block">
+            <div class="section-title">Detalle de Sistema</div>
+            <p class="section-sub">Propiedad, criticidad y ciclo de vida. El objetivo se toma de la descripción.</p>
+
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="nc-system-status">Estado <i>*</i></label>
+                <select
+                  id="nc-system-status"
+                  name="systemStatus"
+                  [(ngModel)]="system.systemStatus"
+                  required
+                >
+                  @for (status of systemStatusOptions; track status.value) {
+                    <option [value]="status.value">{{ status.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-criticality">Criticidad</label>
+                <select
+                  id="nc-system-criticality"
+                  name="criticality"
+                  [(ngModel)]="system.criticality"
+                >
+                  <option value="">Sin definir</option>
+                  @for (option of criticalityOptions; track option.value) {
+                    <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-owner">Área propietaria</label>
+                <input
+                  id="nc-system-owner"
+                  name="ownerArea"
+                  type="text"
+                  [(ngModel)]="system.ownerArea"
+                  maxlength="200"
+                  placeholder="Ingresa área propietaria"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-golive">Puesta en producción</label>
+                <input
+                  id="nc-system-golive"
+                  name="goLiveDate"
+                  type="date"
+                  [(ngModel)]="system.goLiveDate"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-system-eol">Fin de vida</label>
+                <input
+                  id="nc-system-eol"
+                  name="endOfLifeDate"
+                  type="date"
+                  [(ngModel)]="system.endOfLifeDate"
+                />
+              </div>
+            </div>
+          </div>
+
+        }
+
+        @if (kind() === 'API') {
+          <div class="section-block">
+            <div class="section-title">Detalle API</div>
+            <p class="section-sub">Versión, endpoint, protocolo, autenticación y SLA.</p>
+
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="nc-api-version">Versión</label>
+                <input
+                  id="nc-api-version"
+                  name="apiVersion"
+                  type="text"
+                  [(ngModel)]="api.apiVersion"
+                  maxlength="50"
+                  placeholder="Ej. 1.0.0"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-api-protocol">Protocolo</label>
+                <select id="nc-api-protocol" name="apiProtocol" [(ngModel)]="api.protocol">
+                  <option value="">Sin definir</option>
+                  @for (protocol of protocolOptions; track protocol) {
+                    <option [value]="protocol">{{ protocol }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="form-field full-width">
+                <label for="nc-api-url">URL</label>
+                <input
+                  id="nc-api-url"
+                  name="apiUrl"
+                  type="url"
+                  [(ngModel)]="api.url"
+                  maxlength="2000"
+                  placeholder="https://api.ejemplo.com/v1"
+                />
+              </div>
+
+              <div class="form-field">
+                <label for="nc-api-auth">Autenticación</label>
+                <input
+                  id="nc-api-auth"
+                  name="apiAuth"
+                  type="text"
+                  [(ngModel)]="api.authenticationMethod"
+                  maxlength="100"
+                  placeholder="Ej. Bearer JWT"
+                />
+              </div>
+
+              <div class="form-field full-width">
+                <label for="nc-api-sla">Descripción de SLA</label>
+                <textarea
+                  id="nc-api-sla"
+                  name="apiSla"
+                  [(ngModel)]="api.slaDescription"
+                  rows="3"
+                  placeholder="Ej. Disponibilidad 99.9%"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (kind() === 'SYSTEM' || kind() === 'API') {
+          <div class="section-block">
+            <div class="section-title">Despliegues</div>
+            <p class="section-sub">URL por ambiente. Solo se guardan los ambientes con URL.</p>
+            <div class="env-grid">
+              @for (dep of deployments; track dep.environment; let depIndex = $index) {
+                <div class="env-card">
+                  <span class="env-badge">{{ deploymentLabel(dep.environment) }}</span>
+                  <div class="form-field">
+                    <label [attr.for]="'nc-deploy-url-' + dep.environment">URL</label>
+                    <input
+                      [id]="'nc-deploy-url-' + dep.environment"
+                      type="url"
+                      [ngModel]="dep.url"
+                      [name]="'deployUrl-' + dep.environment"
+                      (ngModelChange)="updateDeploymentUrl(depIndex, $event)"
+                      maxlength="2000"
+                      placeholder="https://…"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @if (kind() === 'FRONTEND') {
+          <div class="section-block">
+            <div class="section-title">Ambientes Frontend</div>
+            <p class="section-sub">Versión y URL por ambiente.</p>
+            <div class="env-grid">
+              @for (env of frontend.environments; track env.env; let envIndex = $index) {
+                <div class="env-card">
+                  <span class="env-badge">{{ env.env }}</span>
+                  <div class="form-field">
+                    <label [attr.for]="'nc-front-ver-' + env.env">Versión</label>
+                    <input
+                      [id]="'nc-front-ver-' + env.env"
+                      type="text"
+                      [ngModel]="env.version"
+                      [name]="'frontVersion-' + env.env"
+                      (ngModelChange)="updateEnvField('frontend', envIndex, 'version', $event)"
+                      placeholder="ej. 2.0.1"
+                    />
+                  </div>
+                  <div class="form-field">
+                    <label [attr.for]="'nc-front-url-' + env.env">URL</label>
+                    <input
+                      [id]="'nc-front-url-' + env.env"
+                      type="url"
+                      [ngModel]="env.url"
+                      [name]="'frontUrl-' + env.env"
+                      (ngModelChange)="updateEnvField('frontend', envIndex, 'url', $event)"
+                      placeholder="https://…"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        @if (kind() === 'DATABASE') {
+          <div class="section-block">
+            <div class="section-title">Detalle Base de Datos</div>
+            <p class="section-sub">Motor, versión, instancia y esquema.</p>
+
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="nc-db-engine">Motor <i>*</i></label>
+                <input
+                  id="nc-db-engine"
+                  name="dbEngine"
+                  type="text"
+                  [(ngModel)]="database.engine"
+                  maxlength="100"
+                  required
+                  placeholder="Ej. Oracle"
+                />
+              </div>
+              <div class="form-field">
+                <label for="nc-db-version">Versión</label>
+                <input
+                  id="nc-db-version"
+                  name="dbVersion"
+                  type="text"
+                  [(ngModel)]="database.engineVersion"
+                  maxlength="100"
+                  placeholder="Ej. 19c"
+                />
+              </div>
+              <div class="form-field">
+                <label for="nc-db-instance">Instancia</label>
+                <input
+                  id="nc-db-instance"
+                  name="dbInstance"
+                  type="text"
+                  [(ngModel)]="database.instanceName"
+                  maxlength="200"
+                  placeholder="ej. proddb"
+                  (keydown)="transformToLowerCase($event, 200)"
+                  (paste)="transformPasteToLower($event, 200)"
+                />
+              </div>
+              <div class="form-field">
+                <label for="nc-db-schema">Esquema</label>
+                <input
+                  id="nc-db-schema"
+                  name="dbSchema"
+                  type="text"
+                  [(ngModel)]="database.schemaName"
+                  maxlength="200"
+                  placeholder="Ej. CATSYS"
+                />
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (kind()) {
+          <div class="section-block">
+            <div class="section-title">Tecnologías</div>
+            <p class="section-sub">Selecciona las tecnologías asociadas a este componente.</p>
+
+            <div class="pills-wrap">
+              <div class="pills">
+                @for (tech of selectedTechnologies(); track tech.technologyId) {
+                  <span class="pill">
+                    {{ tech.name }}
+                    <button
+                      type="button"
+                      aria-label="Quitar tecnología"
+                      (click)="removeTechnology(tech.technologyId!)"
+                    >
+                      ×
+                    </button>
+                  </span>
+                }
+              </div>
+              <div class="pill-options">
+                @for (tech of availableTechnologies(); track tech.technologyId) {
+                  <button
+                    type="button"
+                    class="pill-option"
+                    (click)="toggleTechnology(tech.technologyId!)"
+                  >
+                    {{ tech.name }}
+                  </button>
+                } @empty {
+                  @if (loadingCatalogs()) {
+                    <span class="empty-hint">Cargando tecnologías…</span>
+                  } @else if (technologies().length === 0) {
+                    <span class="empty-hint">No hay tecnologías en el catálogo.</span>
+                  } @else {
+                    <span class="empty-hint">Todas las tecnologías están seleccionadas.</span>
+                  }
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" (click)="close()" [disabled]="saving()">
+            Cancelar
+          </button>
+          <button type="submit" class="primary-button" [disabled]="!kind() || saving()">
+            {{ saving() ? 'Creando...' : 'Crear registro' }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

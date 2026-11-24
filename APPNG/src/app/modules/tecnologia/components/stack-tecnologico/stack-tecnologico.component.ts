@@ -23,6 +23,7 @@ type ComponentTechnologyRow = ComponentTechnology & { _rowId: string };
 type ComponentTechnologyForm = {
   componentId: number | null;
   technologyId: number | null;
+  technologyIds: number[];
   version: string;
   isPrimary: ActiveFlag;
 };
@@ -81,6 +82,7 @@ export class StackTecnologicoComponent implements OnInit {
   readonly deleting = signal(false);
   readonly formError = signal('');
   readonly selectedComponentId = signal<number | null>(null);
+  readonly selectedTechnologyIds = signal<number[]>([]);
   form: ComponentTechnologyForm = this.emptyForm();
 
   readonly filteredRows = computed(() => {
@@ -97,19 +99,31 @@ export class StackTecnologicoComponent implements OnInit {
     );
   });
 
-  readonly availableTechnologies = computed(() => {
+  readonly usedTechnologyIdsForComponent = computed(() => {
     const componentId = this.selectedComponentId();
     const editingTechnologyId = this.isEditing() ? this.form.technologyId : null;
-    const usedTechnologyIds = new Set(
+    return new Set(
       this.rows()
         .filter((row) => Number(row.componentId) === Number(componentId))
         .map((row) => Number(row.technologyId))
         .filter((id) => id !== Number(editingTechnologyId)),
     );
+  });
+
+  readonly availableTechnologies = computed(() => {
+    const used = this.usedTechnologyIdsForComponent();
+    const selected = new Set(this.selectedTechnologyIds());
     return this.technologies().filter((technology) => {
       const id = Number(technology.technologyId);
-      return Number.isFinite(id) && !usedTechnologyIds.has(id);
+      return Number.isFinite(id) && !used.has(id) && !selected.has(id);
     });
+  });
+
+  readonly selectedTechnologies = computed(() => {
+    const selected = new Set(this.selectedTechnologyIds());
+    return this.technologies().filter(
+      (technology) => technology.technologyId != null && selected.has(technology.technologyId),
+    );
   });
 
   ngOnInit(): void {
@@ -119,11 +133,9 @@ export class StackTecnologicoComponent implements OnInit {
   }
 
   get canSubmit(): boolean {
-    return (
-      this.form.componentId != null &&
-      this.form.technologyId != null &&
-      !!this.form.isPrimary
-    );
+    if (this.form.componentId == null || !this.form.isPrimary) return false;
+    if (this.isEditing()) return this.form.technologyId != null;
+    return this.selectedTechnologyIds().length > 0;
   }
 
   onComponentIdChange(value: number | string | null): void {
@@ -131,11 +143,28 @@ export class StackTecnologicoComponent implements OnInit {
     this.form.componentId = this.toId(value);
     this.selectedComponentId.set(this.form.componentId);
     this.form.technologyId = null;
+    this.form.technologyIds = [];
+    this.selectedTechnologyIds.set([]);
   }
 
-  onTechnologyIdChange(value: number | string | null): void {
+  toggleTechnology(technologyId: number): void {
     if (this.isEditing()) return;
-    this.form.technologyId = this.toId(value);
+    this.selectedTechnologyIds.update((ids) => {
+      const next = ids.includes(technologyId)
+        ? ids.filter((id) => id !== technologyId)
+        : [...ids, technologyId];
+      this.form.technologyIds = next;
+      return next;
+    });
+  }
+
+  removeTechnology(technologyId: number): void {
+    if (this.isEditing()) return;
+    this.selectedTechnologyIds.update((ids) => {
+      const next = ids.filter((id) => id !== technologyId);
+      this.form.technologyIds = next;
+      return next;
+    });
   }
 
   componentName(componentId: number | null | undefined): string {
@@ -182,6 +211,7 @@ export class StackTecnologicoComponent implements OnInit {
     this.isEditing.set(false);
     this.form = this.emptyForm();
     this.selectedComponentId.set(null);
+    this.selectedTechnologyIds.set([]);
     this.formError.set('');
     this.modalOpen.set(true);
     this.loadComponents();
@@ -195,10 +225,12 @@ export class StackTecnologicoComponent implements OnInit {
     this.form = {
       componentId,
       technologyId,
+      technologyIds: technologyId != null ? [technologyId] : [],
       version: row.version ?? '',
       isPrimary: row.isPrimary ?? 'N',
     };
     this.selectedComponentId.set(componentId);
+    this.selectedTechnologyIds.set(technologyId != null ? [technologyId] : []);
     this.formError.set('');
     this.modalOpen.set(true);
     this.loadComponents();
@@ -209,6 +241,7 @@ export class StackTecnologicoComponent implements OnInit {
     this.modalOpen.set(false);
     this.isEditing.set(false);
     this.selectedComponentId.set(null);
+    this.selectedTechnologyIds.set([]);
     this.formError.set('');
     this.saving.set(false);
     this.deleting.set(false);
@@ -249,14 +282,13 @@ export class StackTecnologicoComponent implements OnInit {
     if (this.saving() || this.deleting() || !this.canSubmit) return;
 
     const componentId = this.toId(this.form.componentId);
-    const technologyId = this.toId(this.form.technologyId);
-    const version = this.form.version.trim();
 
-    if (componentId == null || technologyId == null || !this.form.isPrimary) {
+    if (componentId == null || !this.form.isPrimary) {
       this.formError.set('Completa los campos obligatorios.');
       return;
     }
 
+    const version = this.isEditing() ? this.form.version.trim() : '';
     if (version.length > 100) {
       this.formError.set('La versión no puede superar 100 caracteres.');
       return;
@@ -266,6 +298,13 @@ export class StackTecnologicoComponent implements OnInit {
     this.formError.set('');
 
     if (this.isEditing()) {
+      const technologyId = this.toId(this.form.technologyId);
+      if (technologyId == null) {
+        this.saving.set(false);
+        this.formError.set('Completa los campos obligatorios.');
+        return;
+      }
+
       const updateBody: ComponentTechnologyUpdateRequest = {
         isPrimary: this.form.isPrimary,
         version: version || null,
@@ -287,24 +326,31 @@ export class StackTecnologicoComponent implements OnInit {
       return;
     }
 
-    const createBody: ComponentTechnology = {
-      componentId,
-      technologyId,
-      isPrimary: this.form.isPrimary,
-    };
-    if (version) createBody.version = version;
+    const technologies = [...this.selectedTechnologyIds()];
+    if (technologies.length === 0) {
+      this.saving.set(false);
+      this.formError.set('Selecciona al menos una tecnología.');
+      return;
+    }
 
-    this.componentTechnologiesService.createComponentTechnology(createBody).subscribe({
-      next: () => {
-        this.toastService.success('Tecnología de componente creada correctamente');
-        this.closeModal();
-        this.loadComponentTechnologies();
-      },
-      error: (error: HttpErrorResponse) => {
-        this.saving.set(false);
-        this.toastService.error(this.resolveErrorMessage(error, 'create'));
-      },
-    });
+    this.componentTechnologiesService
+      .createComponentTechnologiesBatch({
+        componentId,
+        technologies,
+        version: '',
+        isPrimary: this.form.isPrimary,
+      })
+      .subscribe({
+        next: () => {
+          this.toastService.success('Stack tecnológico creado correctamente');
+          this.closeModal();
+          this.loadComponentTechnologies();
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.toastService.error(this.resolveErrorMessage(error, 'create'));
+        },
+      });
   }
 
   private loadComponentTechnologies(): void {
@@ -355,6 +401,7 @@ export class StackTecnologicoComponent implements OnInit {
     return {
       componentId: null,
       technologyId: null,
+      technologyIds: [],
       version: '',
       isPrimary: 'N',
     };
@@ -387,6 +434,6 @@ export class StackTecnologicoComponent implements OnInit {
     if (action === 'list') return 'No fue posible cargar el stack tecnológico.';
     if (action === 'update') return 'No fue posible actualizar la tecnología de componente.';
     if (action === 'delete') return 'No fue posible eliminar la tecnología de componente.';
-    return 'No fue posible crear la tecnología de componente.';
+    return 'No fue posible crear el stack tecnológico.';
   }
 }

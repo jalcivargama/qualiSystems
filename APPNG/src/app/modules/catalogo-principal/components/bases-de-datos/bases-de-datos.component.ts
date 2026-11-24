@@ -4,6 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import {
+  transformInputToLowerCase,
+  transformPasteToLowerCase,
+} from '../../../../shared/functions/input.functions';
 import { ComponentsService } from '../componentes/components.service';
 import { CatalogComponent } from '../componentes/models/component.model';
 import { DatabaseDetailsService } from './database-details.service';
@@ -33,6 +37,9 @@ export class BasesDeDatosComponent implements OnInit {
   private readonly databaseDetailsService = inject(DatabaseDetailsService);
   private readonly componentsService = inject(ComponentsService);
   private readonly toastService = inject(ToastService);
+
+  readonly transformToLowerCase = transformInputToLowerCase;
+  readonly transformPasteToLower = transformPasteToLowerCase;
 
   readonly rows = signal<DatabaseRow[]>([]);
   readonly components = signal<CatalogComponent[]>([]);
@@ -119,7 +126,7 @@ export class BasesDeDatosComponent implements OnInit {
       componentId,
       engine: row.engine ?? '',
       engineVersion: row.engineVersion ?? '',
-      instanceName: row.instanceName ?? '',
+      instanceName: (row.instanceName ?? '').toLowerCase(),
       schemaName: row.schemaName ?? '',
     };
     this.formError.set('');
@@ -176,8 +183,9 @@ export class BasesDeDatosComponent implements OnInit {
 
     const engine = this.form.engine.trim();
     const engineVersion = this.form.engineVersion.trim();
-    const instanceName = this.form.instanceName.trim();
+    const instanceName = this.form.instanceName.trim().toLowerCase();
     const schemaName = this.form.schemaName.trim();
+    this.form.instanceName = instanceName;
 
     if (!engine) {
       this.formError.set('Completa los campos obligatorios.');

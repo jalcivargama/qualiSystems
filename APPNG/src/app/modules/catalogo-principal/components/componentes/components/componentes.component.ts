@@ -11,6 +11,10 @@ import {
   ComponentRequest,
   ComponentType,
 } from '../models/component.model';
+import { NuevoSistemaModalComponent } from '../nuevo-sistema-modal/nuevo-sistema-modal.component';
+import { NuevoSistemaForm } from '../nuevo-sistema-modal/nuevo-sistema-modal.models';
+import { NuevoComponenteModalComponent } from '../nuevo-componente-modal/nuevo-componente-modal.component';
+import { NuevoComponenteForm } from '../nuevo-componente-modal/nuevo-componente-modal.models';
 
 type ComponentRow = CatalogComponent & { _rowId: string };
 
@@ -24,7 +28,13 @@ type CreateForm = {
 
 @Component({
   selector: 'app-componentes',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    NuevoSistemaModalComponent,
+    NuevoComponenteModalComponent,
+  ],
   templateUrl: './componentes.component.html',
   styleUrl: './componentes.component.css',
 })
@@ -57,7 +67,10 @@ export class ComponentesComponent implements OnInit {
   readonly rows = signal<ComponentRow[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly selectedType = signal<ComponentType | ''>('');
   readonly modalOpen = signal(false);
+  readonly nuevoSistemaModalOpen = signal(false);
+  readonly nuevoComponenteModalOpen = signal(false);
   readonly isEditing = signal(false);
   readonly editingComponentId = signal<number | null>(null);
   readonly saving = signal(false);
@@ -67,8 +80,17 @@ export class ComponentesComponent implements OnInit {
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
-    const rows = this.rows();
+    const type = this.selectedType();
+    let rows = this.rows();
+
+    if (type) {
+      rows = rows.filter(
+        (row) => String(row.componentType ?? '').trim().toUpperCase() === type,
+      );
+    }
+
     if (!query) return rows;
+
     return rows.filter((row) =>
       [
         this.labelForComponentType(row.componentType),
@@ -102,6 +124,31 @@ export class ComponentesComponent implements OnInit {
     this.modalOpen.set(true);
   }
 
+  openNuevoSistema(): void {
+    this.nuevoSistemaModalOpen.set(true);
+  }
+
+  closeNuevoSistema(): void {
+    this.nuevoSistemaModalOpen.set(false);
+  }
+
+  onNuevoSistemaSaved(_payload: NuevoSistemaForm): void {
+    this.nuevoSistemaModalOpen.set(false);
+  }
+
+  openNuevoComponente(): void {
+    this.nuevoComponenteModalOpen.set(true);
+  }
+
+  closeNuevoComponente(): void {
+    this.nuevoComponenteModalOpen.set(false);
+  }
+
+  onNuevoComponenteSaved(_payload: NuevoComponenteForm): void {
+    this.nuevoComponenteModalOpen.set(false);
+    this.loadComponents();
+  }
+
   openEdit(row: ComponentRow): void {
     this.isEditing.set(true);
     this.editingComponentId.set(row.componentId ?? null);
@@ -127,6 +174,7 @@ export class ComponentesComponent implements OnInit {
 
   clearSearch(): void {
     this.searchTerm.set('');
+    this.selectedType.set('');
   }
 
   deleteCurrent(): void {

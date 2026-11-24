@@ -1,0 +1,337 @@
+@if (open()) {
+  <div class="modal-backdrop" (click)="close()">
+    <section
+      class="record-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Nuevo sistema"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="modal-heading">
+        <div>
+          <span class="panel-kicker">catalog_system</span>
+          <h2>Nuevo Sistema</h2>
+          <p>Completa los datos del sistema y añade sus componentes.</p>
+        </div>
+        <button class="modal-close" type="button" aria-label="Cerrar" (click)="close()">×</button>
+      </div>
+
+      <form (ngSubmit)="submit()">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="ns-name">Nombre <i>*</i></label>
+            <input
+              id="ns-name"
+              name="name"
+              type="text"
+              [(ngModel)]="form.name"
+              required
+              maxlength="200"
+              placeholder="Ingresa nombre"
+            />
+          </div>
+          
+          <div class="form-field">
+            <label for="ns-isActive">Activo <i>*</i></label>
+            <select id="ns-isActive" name="isActive" [(ngModel)]="form.isActive" required>
+              @for (flag of activeFlagOptions; track flag.value) {
+                <option [value]="flag.value">{{ flag.label }}</option>
+              }
+            </select>
+          </div>
+
+
+          <div class="form-field">
+            <label for="ns-acronym">Acrónimo</label>
+            <input
+              id="ns-acronym"
+              name="acronym"
+              type="text"
+              [(ngModel)]="form.acronym"
+              maxlength="50"
+              placeholder="Ingresa acrónimo"
+            />
+          </div>
+
+          <div class="form-field full-width">
+            <label for="ns-description">Descripción</label>
+            <textarea
+              id="ns-description"
+              name="description"
+              [(ngModel)]="form.description"
+              rows="3"
+              placeholder="Describe el sistema"
+            ></textarea>
+          </div>
+
+          <div class="form-field full-width">
+            <label for="ns-responsable">Responsable</label>
+            <select
+              id="ns-responsable"
+              name="responsable"
+              [ngModel]="responsiblePersonId()"
+              (ngModelChange)="setResponsible($event)"
+            >
+              <option [ngValue]="null">Selecciona un responsable…</option>
+              @for (person of availablePeople(); track person.personId) {
+                <option [ngValue]="person.personId">{{ personLabel(person) }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-heading">
+            <div>
+              <div class="section-title">Componentes</div>
+              <p class="section-sub">Añade Frontend, API o Base de Datos según la arquitectura.</p>
+            </div>
+          </div>
+
+          @for (component of components(); track component.id; let index = $index) {
+            <article class="component-card">
+              <div class="component-card-header">
+                <strong>{{ kindLabel(component.kind) }} #{{ index + 1 }}</strong>
+                <button
+                  type="button"
+                  class="danger-ghost"
+                  (click)="removeComponent(component.id)"
+                >
+                  Eliminar
+                </button>
+              </div>
+
+              <div class="component-card-body">
+                @if (component.kind === 'FRONTEND') {
+                  <div class="env-grid">
+                    @for (env of component.environments; track env.env; let envIndex = $index) {
+                      <div class="env-card">
+                        <span class="env-badge">{{ env.env }}</span>
+                        <div class="form-field">
+                          <label [attr.for]="'ns-front-ver-' + component.id + '-' + env.env">Versión</label>
+                          <input
+                            [id]="'ns-front-ver-' + component.id + '-' + env.env"
+                            type="text"
+                            [ngModel]="env.version"
+                            [name]="'frontVersion-' + component.id + '-' + env.env"
+                            (ngModelChange)="updateEnvField(component.id, envIndex, 'version', $event)"
+                            placeholder="ej. 2.0.1"
+                          />
+                        </div>
+                        <div class="form-field">
+                          <label [attr.for]="'ns-front-url-' + component.id + '-' + env.env">URL</label>
+                          <input
+                            [id]="'ns-front-url-' + component.id + '-' + env.env"
+                            type="url"
+                            [ngModel]="env.url"
+                            [name]="'frontUrl-' + component.id + '-' + env.env"
+                            (ngModelChange)="updateEnvField(component.id, envIndex, 'url', $event)"
+                            placeholder="https://…"
+                          />
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (component.kind === 'API') {
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label [attr.for]="'ns-api-protocol-' + component.id">Protocolo</label>
+                      <select
+                        [id]="'ns-api-protocol-' + component.id"
+                        [name]="'apiProtocol-' + component.id"
+                        [ngModel]="component.protocol"
+                        (ngModelChange)="patchApiField(component.id, 'protocol', $event)"
+                      >
+                        @for (protocol of protocolOptions; track protocol) {
+                          <option [value]="protocol">{{ protocol }}</option>
+                        }
+                      </select>
+                    </div>
+                    <div class="form-field">
+                      <label [attr.for]="'ns-api-auth-' + component.id">Tipo autenticación</label>
+                      <select
+                        [id]="'ns-api-auth-' + component.id"
+                        [name]="'apiAuth-' + component.id"
+                        [ngModel]="component.authenticationMethod"
+                        (ngModelChange)="patchApiField(component.id, 'authenticationMethod', $event)"
+                      >
+                        @for (auth of authMethodOptions; track auth) {
+                          <option [value]="auth">{{ auth }}</option>
+                        }
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="env-grid">
+                    @for (env of component.environments; track env.env; let envIndex = $index) {
+                      <div class="env-card">
+                        <span class="env-badge">{{ env.env }}</span>
+                        <div class="form-field">
+                          <label [attr.for]="'ns-api-ver-' + component.id + '-' + env.env">Versión</label>
+                          <input
+                            [id]="'ns-api-ver-' + component.id + '-' + env.env"
+                            type="text"
+                            [ngModel]="env.version"
+                            [name]="'apiVersion-' + component.id + '-' + env.env"
+                            (ngModelChange)="updateEnvField(component.id, envIndex, 'version', $event)"
+                            placeholder="ej. 1.2.0"
+                          />
+                        </div>
+                        <div class="form-field">
+                          <label [attr.for]="'ns-api-url-' + component.id + '-' + env.env">URL</label>
+                          <input
+                            [id]="'ns-api-url-' + component.id + '-' + env.env"
+                            type="url"
+                            [ngModel]="env.url"
+                            [name]="'apiUrl-' + component.id + '-' + env.env"
+                            (ngModelChange)="updateEnvField(component.id, envIndex, 'url', $event)"
+                            placeholder="https://…"
+                          />
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                @if (component.kind === 'DATABASE') {
+                  <div class="form-grid">
+                    <div class="form-field">
+                      <label [attr.for]="'ns-db-engine-' + component.id">Motor</label>
+                      <input
+                        [id]="'ns-db-engine-' + component.id"
+                        type="text"
+                        [name]="'dbEngine-' + component.id"
+                        [ngModel]="component.engine"
+                        (ngModelChange)="patchDatabaseField(component.id, 'engine', $event)"
+                        placeholder="Oracle, PostgreSQL…"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label [attr.for]="'ns-db-version-' + component.id">Versión</label>
+                      <input
+                        [id]="'ns-db-version-' + component.id"
+                        type="text"
+                        [name]="'dbVersion-' + component.id"
+                        [ngModel]="component.engineVersion"
+                        (ngModelChange)="patchDatabaseField(component.id, 'engineVersion', $event)"
+                        placeholder="ej. 19c"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label [attr.for]="'ns-db-instance-' + component.id">Instancia</label>
+                      <input
+                        [id]="'ns-db-instance-' + component.id"
+                        type="text"
+                        [name]="'dbInstance-' + component.id"
+                        [ngModel]="component.instanceName"
+                        (ngModelChange)="patchDatabaseField(component.id, 'instanceName', $event)"
+                        placeholder="Nombre de instancia"
+                      />
+                    </div>
+                    <div class="form-field">
+                      <label [attr.for]="'ns-db-schema-' + component.id">Esquema</label>
+                      <input
+                        [id]="'ns-db-schema-' + component.id"
+                        type="text"
+                        [name]="'dbSchema-' + component.id"
+                        [ngModel]="component.schemaName"
+                        (ngModelChange)="patchDatabaseField(component.id, 'schemaName', $event)"
+                        placeholder="SCHEMA_APP"
+                      />
+                    </div>
+                    <div class="form-field full-width">
+                      <label [attr.for]="'ns-db-jndi-' + component.id">Nombre JNDI</label>
+                      <input
+                        [id]="'ns-db-jndi-' + component.id"
+                        type="text"
+                        [name]="'dbJndi-' + component.id"
+                        [ngModel]="component.jndiName"
+                        (ngModelChange)="patchDatabaseField(component.id, 'jndiName', $event)"
+                        placeholder="jdbc/MiDatasource"
+                      />
+                    </div>
+                  </div>
+                }
+
+                <div class="form-field tech-field">
+                  <label>Tecnologías</label>
+                  <div class="pills-wrap">
+                    <div class="pills">
+                      @for (tech of selectedTechnologies(component); track tech.technologyId) {
+                        <span class="pill">
+                          {{ tech.name }}
+                          <button
+                            type="button"
+                            aria-label="Quitar tecnología"
+                            (click)="removeTechnology(component.id, tech.technologyId!)"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      }
+                    </div>
+                    <div class="pill-options">
+                      @for (tech of availableTechnologies(component); track tech.technologyId) {
+                        <button
+                          type="button"
+                          class="pill-option"
+                          (click)="toggleTechnology(component.id, tech.technologyId!)"
+                        >
+                          {{ tech.name }}
+                        </button>
+                      } @empty {
+                        @if (loadingCatalogs()) {
+                          <span class="empty-hint">Cargando tecnologías…</span>
+                        } @else if (technologies().length === 0) {
+                          <span class="empty-hint">No hay tecnologías en el catálogo.</span>
+                        } @else {
+                          <span class="empty-hint">Todas las tecnologías están seleccionadas.</span>
+                        }
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          } @empty {
+            <p class="empty-components">Aún no has añadido componentes.</p>
+          }
+
+          <div class="add-component-row">
+            <button class="ghost-button" type="button" (click)="toggleTypePicker()">
+              {{ showTypePicker() ? 'Cancelar' : '＋ Añadir componente' }}
+            </button>
+
+            @if (showTypePicker()) {
+              <div class="type-picker">
+                <label for="ns-component-kind">Tipo</label>
+                <select
+                  id="ns-component-kind"
+                  name="pendingKind"
+                  [ngModel]="pendingKind()"
+                  (ngModelChange)="onKindSelected($event)"
+                >
+                  <option value="">Selecciona tipo…</option>
+                  @for (kind of componentKindOptions; track kind.value) {
+                    <option [value]="kind.value">{{ kind.label }}</option>
+                  }
+                </select>
+              </div>
+            }
+          </div>
+        </div>
+
+        @if (formError()) {
+          <div class="error-banner" role="alert">{{ formError() }}</div>
+        }
+
+        <div class="modal-actions">
+          <button type="button" class="secondary-button" (click)="close()">Cancelar</button>
+          <button type="submit" class="primary-button">Crear registro</button>
+        </div>
+      </form>
+    </section>
+  </div>
+}

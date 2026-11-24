@@ -24,8 +24,9 @@ En la computadora donde se instalara y compilara el proyecto:
 | Node.js | Se recomienda Node.js 24 LTS. Angular 21 admite las ramas 20 desde 20.19, 22 desde 22.12 y 24 o superior, segun sus requisitos de version. No asumir que cualquier version intermedia es compatible. |
 | npm | El proyecto declara `npm@11.19.0`. Usar esa version para reproducir el entorno. |
 | Navegador | Un navegador moderno con JavaScript y almacenamiento local habilitados. |
-| JDK | Solo para empaquetar el WAR con `jar`. Por ejemplo, JDK 21. |
-| Servidor web Java | Solo para desplegar el WAR. La version de Java debe ser compatible con el servidor elegido. |
+| JDK | Requerido por Maven al empaquetar el WAR. Por ejemplo, JDK 21. |
+| Maven 3.x | Empaqueta el frontend Angular como WAR para WebLogic (`mvn clean package`). |
+| Servidor web Java | WebLogic para el WAR generado. La version debe ser compatible con el descriptor (`12.2.1.3.0`). |
 
 Descargar Git desde <https://git-scm.com/downloads/win> y Node.js desde
 <https://nodejs.org/>. Para el JDK puede utilizarse <https://adoptium.net/>.
@@ -163,123 +164,70 @@ la SPA deben responder correctamente, idealmente con estado HTTP 200.
 La regla concreta depende del servidor. `npm start` es un servidor de desarrollo,
 no una alternativa de despliegue productivo.
 
-## 6. Compilar y empaquetar un WAR
+## 6. Compilar y empaquetar un WAR (WebLogic)
 
 ### 6.1. Requisitos y contexto
 
-Verificar que el JDK incluya `jar` y este accesible desde la terminal:
+El empaquetado oficial sigue el mismo patron que QColision / Qualitas Gruas:
+Angular genera el estatico y Maven produce `deployments/qualiSystems.war`
+con `war/web.xml` y `war/weblogic.xml` (context-root `qualiSystems`).
+
+Requisitos adicionales:
+
+| Herramienta | Uso |
+| --- | --- |
+| Maven 3.x | `mvn clean package` |
+| Node.js / npm | El POM ejecuta `npm install` y `npm run build` |
+
+Verificar:
 
 ```powershell
 java -version
-jar --version
+mvn -version
+node --version
+npm --version
 ```
 
-El ejemplo genera `qualiSystems.war` para publicarse en `/qualiSystems/`.
-En Tomcat, el nombre del archivo determina normalmente ese contexto.
-Si el administrador asigna un contexto diferente, ajustar `--base-href` antes
-de compilar.
+### 6.2. Generar el WAR
 
-El ejemplo de rutas siguiente es **especifico de Apache Tomcat 9 o posterior**.
-En otros servidores, confirmar la compatibilidad con aplicaciones web estaticas
-y configurar su mecanismo equivalente de reescritura SPA. La configuracion de
-Tomcat no es portable a todos los servidores que aceptan WAR.
-Referencia: [documentacion oficial de RewriteValve](https://tomcat.apache.org/tomcat-9.0-doc/rewrite.html).
-
-### 6.2. Generar los archivos y el paquete
-
-Ejecutar este bloque completo desde PowerShell. Se utiliza una salida separada
-para no mezclar la compilacion estandar con la destinada al WAR.
+Desde `APPNG`:
 
 ```powershell
 Set-Location C:\src\qualiSystems\APPNG
-$ErrorActionPreference = 'Stop'
-
-npm run build -- --configuration production --base-href /qualiSystems/ --output-path .\dist\war
-if ($LASTEXITCODE -ne 0) { throw 'Fallo la compilacion para WAR.' }
-
-$webRoot = Join-Path (Get-Location).Path 'dist\war\browser'
-if (-not (Test-Path -LiteralPath (Join-Path $webRoot 'index.html'))) {
-    throw 'No se encontro index.html en la salida de compilacion.'
-}
-
-$webInf = Join-Path $webRoot 'WEB-INF'
-$metaInf = Join-Path $webRoot 'META-INF'
-New-Item -ItemType Directory -Force -Path $webInf, $metaInf | Out-Null
-
-@'
-<?xml version="1.0" encoding="UTF-8"?>
-<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee https://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
-         version="4.0">
-  <welcome-file-list>
-    <welcome-file>index.html</welcome-file>
-  </welcome-file-list>
-</web-app>
-'@ | Set-Content -LiteralPath (Join-Path $webInf 'web.xml') -Encoding UTF8
-
-@'
-<?xml version="1.0" encoding="UTF-8"?>
-<Context>
-  <Valve className="org.apache.catalina.valves.rewrite.RewriteValve" />
-</Context>
-'@ | Set-Content -LiteralPath (Join-Path $metaInf 'context.xml') -Encoding UTF8
-
-@'
-RewriteRule ^/(login|dashboard|explorador-dependencias|catalogos(/[^/]+)?)/?$ /index.html [L]
-'@ | Set-Content -LiteralPath (Join-Path $webInf 'rewrite.config') -Encoding ASCII
-
-$war = Join-Path (Get-Location).Path 'dist\qualiSystems.war'
-jar --create --file $war -C $webRoot .
-if ($LASTEXITCODE -ne 0) { throw 'Fallo el empaquetado del WAR.' }
-
-jar --list --file $war
-if ($LASTEXITCODE -ne 0) { throw 'No se pudo leer el WAR generado.' }
+npm install
+mvn clean package
 ```
 
-El resultado es:
+Salida:
 
 ```text
-C:\src\qualiSystems\APPNG\dist\qualiSystems.war
+C:\src\qualiSystems\APPNG\deployments\qualiSystems.war
 ```
 
-Dentro del WAR, `index.html` debe estar en la raiz, junto con los recursos de
-Angular, `WEB-INF\web.xml`, `WEB-INF\rewrite.config` y `META-INF\context.xml`.
-No debe quedar anidado bajo `browser` ni bajo `dist`.
-
-La regla de Tomcat cubre las rutas actuales de
-[app.routes.ts](APPNG/src/app/app.routes.ts), sin reescribir los recursos estaticos.
-Si se agregan rutas, actualizar la regla y regenerar el paquete. Las rutas
-desconocidas solicitadas directamente al servidor conservaran su respuesta 404.
-
-### 6.3. Desplegar en Tomcat
-
-Con Tomcat instalado y configurado, establecer la ruta real de su instancia y
-copiar el WAR:
+Perfiles:
 
 ```powershell
-$tomcatBase = 'C:\servidores\apache-tomcat'
-Copy-Item -LiteralPath C:\src\qualiSystems\APPNG\dist\qualiSystems.war `
-    -Destination (Join-Path $tomcatBase 'webapps\qualiSystems.war')
+mvn clean package -Pprod   # production → environment.prod.ts (por defecto)
+mvn clean package -Pqa     # qa → environment.qa.ts
 ```
 
-Iniciar o reiniciar la instancia con el procedimiento autorizado del entorno.
-La copia a `webapps` requiere que el `Host` permita despliegue automatico; si no,
-utilizar Tomcat Manager o el mecanismo indicado por el administrador.
+URL esperada tras desplegar en WebLogic:
 
-Si el servidor escucha en el puerto 8080, abrir:
+```text
+https://host/qualiSystems/
+```
 
-<http://localhost:8080/qualiSystems/>
+Detalle de configuracion (`pom.xml`, `angular.json`, `war/`): ver [APPNG/README.md](APPNG/README.md).
 
-La configuracion embebida de `META-INF\context.xml` requiere que Tomcat permita
-procesar el descriptor de contexto (`deployXML`). Si esta deshabilitado, el
-administrador debe configurar la `RewriteValve` en el contexto externo de la
-aplicacion; no deshabilitar restricciones del servidor sin autorizacion.
-Revisar los logs de Tomcat ante errores de despliegue o de reescritura.
+### 6.3. Desplegar
 
-Para desplegar en la raiz con Tomcat, compilar con `--base-href /`, empaquetar como
-`ROOT.war` y coordinar el reemplazo del contexto raiz existente. No renombrar un
-WAR compilado para `/qualiSystems/` esperando que funcione en `/`.
+Desplegar `deployments/qualiSystems.war` en WebLogic con el procedimiento del
+entorno. El `context-root` queda definido en `war/weblogic.xml` como
+`qualiSystems`. El `web.xml` redirige 404 a `/index.html` para soportar el
+enrutado SPA (`PathLocationStrategy`).
+
+No renombrar un WAR compilado para `/qualiSystems/` esperando que funcione en
+`/`: el `baseHref` y el `context-root` deben coincidir.
 
 ## 7. Verificacion posterior al despliegue
 
@@ -296,13 +244,13 @@ WAR compilado para `/qualiSystems/` esperando que funcione en `/`.
 
 | Sintoma | Revision |
 | --- | --- |
-| `node`, `npm` o `jar` no se reconocen | Revisar instalacion y `PATH`; abrir una terminal nueva. `jar` requiere JDK, no solo JRE. |
+| `node`, `npm` o `mvn` no se reconocen | Revisar instalacion y `PATH`; abrir una terminal nueva. Maven requiere JDK. |
 | PowerShell bloquea `npm.ps1` | Utilizar `npm.cmd` en lugar de `npm`; no es necesario cambiar la politica de ejecucion global. |
 | Error de version de Node.js | Utilizar una rama compatible; se recomienda Node.js 24 LTS con npm 11.19.0. |
 | Puerto 4200 ocupado | Ejecutar `npm start -- --port 4300`. |
-| Pagina vacia o recursos con 404 | Comprobar que `base-href` coincide exactamente con el contexto publicado. |
-| Funciona al navegar, pero falla al recargar | Revisar la reescritura SPA y, en Tomcat, la activacion de `RewriteValve`. |
-| El servidor rechaza el WAR | Revisar logs, version Java/servidor y compatibilidad del descriptor. Otros servidores pueden requerir configuracion propia. |
+| Pagina vacia o recursos con 404 | Comprobar que `baseHref` (`/qualiSystems/`) coincide con el `context-root` publicado. |
+| Funciona al navegar, pero falla al recargar | Revisar el `error-page` 404 → `/index.html` en `war/web.xml`. |
+| El servidor rechaza el WAR | Revisar logs de WebLogic y la version declarada en `war/weblogic.xml`. |
 | La compilacion supera los presupuestos | Revisar los mensajes y optimizar los recursos; los limites estan en [angular.json](APPNG/angular.json). No ignorar el fallo. |
 | Los datos no aparecen en otro navegador | Es el comportamiento actual: se guardan en `localStorage`, no en un backend. |
 

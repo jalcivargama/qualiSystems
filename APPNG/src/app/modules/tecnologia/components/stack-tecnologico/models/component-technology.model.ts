@@ -8,6 +8,14 @@ export interface ComponentTechnology {
   isPrimary: ActiveFlag;
 }
 
+/** Body para CREATE por lote (varias tecnologías en un request) */
+export interface ComponentTechnologyBatchRequest {
+  componentId: number;
+  technologies: number[];
+  version?: string | null;
+  isPrimary: ActiveFlag;
+}
+
 /** Body para UPDATE (clave va en la URL) */
 export type ComponentTechnologyUpdateRequest = Omit<
   ComponentTechnology,
