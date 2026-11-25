@@ -42,6 +42,7 @@
           <th>Destino</th>
           <th>Tipo</th>
           <th>Alcance</th>
+          <th>Flujo</th>
           <th>Criticidad</th>
           <th>Descripción</th>
           <th>Creado el</th>
@@ -51,7 +52,7 @@
       <tbody>
         @if (loading()) {
           <tr>
-            <td class="empty-cell" colspan="9">
+            <td class="empty-cell" colspan="10">
               <strong>Cargando dependencias...</strong>
             </td>
           </tr>
@@ -63,6 +64,7 @@
               <td [title]="componentName(row.targetComponentId)">{{ componentName(row.targetComponentId) }}</td>
               <td [title]="dependencyTypeName(row.dependencyTypeId)">{{ dependencyTypeName(row.dependencyTypeId) }}</td>
               <td [title]="labelForScope(row.dependencyScope)">{{ labelForScope(row.dependencyScope) }}</td>
+              <td [title]="labelForFlowTipe(row.flowTipe)">{{ labelForFlowTipe(row.flowTipe) }}</td>
               <td [title]="labelForCriticality(row.criticality)">{{ labelForCriticality(row.criticality) }}</td>
               <td [title]="row.description || ''">{{ row.description || '—' }}</td>
               <td [title]="row.createdAt || ''">{{ row.createdAt || '—' }}</td>
@@ -80,7 +82,7 @@
             </tr>
           } @empty {
             <tr>
-              <td class="empty-cell" colspan="9">
+              <td class="empty-cell" colspan="10">
                 <span class="empty-illustration">▤</span>
                 <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
@@ -188,6 +190,21 @@
               required
             >
               @for (option of scopeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="field-flowTipe">Flujo <i>*</i></label>
+            <select
+              id="field-flowTipe"
+              name="flowTipe"
+              [(ngModel)]="form.flowTipe"
+              required
+            >
+              <option value="">Selecciona un flujo</option>
+              @for (option of flowTipeOptions; track option.value) {
                 <option [value]="option.value">{{ option.label }}</option>
               }
             </select>
