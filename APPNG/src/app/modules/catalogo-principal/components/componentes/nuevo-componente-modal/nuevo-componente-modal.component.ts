@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, Observable, of, switchMap, throwError } from 'rxjs';
+import { concatMap, forkJoin, from, Observable, of, switchMap, throwError, toArray } from 'rxjs';
 import { ToastService } from '../../../../../core/toast.service';
 import { PeopleService } from '../../../../personas-y-roles/components/personas/people.service';
 import { Person } from '../../../../personas-y-roles/components/personas/models/person.model';
@@ -31,7 +31,9 @@ import {
   DeploymentEnvironment,
   ENVIRONMENT_CODES,
   EnvConfig,
+  MAX_NUEVO_COMPONENTES,
   NUEVO_COMPONENTE_KIND_OPTIONS,
+  NuevoComponenteDraft,
   NuevoComponenteForm,
   NuevoComponenteKind,
   PROTOCOL_OPTIONS,
@@ -59,19 +61,17 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   readonly open = input(false);
   readonly closed = output<void>();
-  readonly saved = output<NuevoComponenteForm>();
+  readonly saved = output<NuevoComponenteForm[]>();
 
   readonly people = signal<Person[]>([]);
   readonly roles = signal<ResponsibilityRole[]>([]);
   readonly technologies = signal<Technology[]>([]);
+  readonly drafts = signal<NuevoComponenteDraft[]>([]);
   readonly loadingCatalogs = signal(false);
   readonly saving = signal(false);
   readonly formError = signal('');
-
-  readonly kind = signal<NuevoComponenteKind | ''>('');
-  readonly responsiblePersonId = signal<number | null>(null);
-  readonly responsibleRoleId = signal<number | null>(null);
-  readonly technologyIds = signal<number[]>([]);
+  readonly showTypePicker = signal(false);
+  readonly pendingKind = signal<NuevoComponenteKind | ''>('');
 
   readonly activeFlagOptions = [
     { value: 'Y' as const, label: 'SÍ' },
@@ -83,15 +83,11 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly criticalityOptions = CRITICALITY_OPTIONS;
   readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
   readonly deploymentEnvironments = DEPLOYMENT_ENVIRONMENTS;
+  readonly maxComponents = MAX_NUEVO_COMPONENTES;
   readonly transformToLowerCase = transformInputToLowerCase;
   readonly transformPasteToLower = transformPasteToLowerCase;
 
-  form = this.emptyCommonForm();
-  system = this.emptySystem();
-  deployments = this.emptyDeployments();
-  frontend = this.emptyFrontend();
-  api = this.emptyApi();
-  database = this.emptyDatabase();
+  private seq = 0;
 
   readonly availablePeople = computed(() =>
     this.people().filter(
@@ -104,19 +100,14 @@ export class NuevoComponenteModalComponent implements OnInit {
     this.roles().filter((role) => role.roleId != null),
   );
 
-  readonly selectedTechnologies = computed(() => {
-    const selected = new Set(this.technologyIds());
-    return this.technologies().filter(
-      (tech) => tech.technologyId != null && selected.has(tech.technologyId),
-    );
+  readonly availableKindOptions = computed(() => {
+    const used = new Set(this.drafts().map((draft) => draft.kind));
+    return this.kindOptions.filter((option) => !used.has(option.value));
   });
 
-  readonly availableTechnologies = computed(() => {
-    const selected = new Set(this.technologyIds());
-    return this.technologies().filter(
-      (tech) => tech.technologyId != null && !selected.has(tech.technologyId),
-    );
-  });
+  readonly canAddMore = computed(
+    () => this.drafts().length < this.maxComponents && this.availableKindOptions().length > 0,
+  );
 
   ngOnInit(): void {
     this.loadCatalogs();
@@ -129,51 +120,166 @@ export class NuevoComponenteModalComponent implements OnInit {
   }
 
   reset(): void {
-    this.kind.set('');
-    this.responsiblePersonId.set(null);
-    this.responsibleRoleId.set(null);
-    this.technologyIds.set([]);
-    this.form = this.emptyCommonForm();
-    this.system = this.emptySystem();
-    this.deployments = this.emptyDeployments();
-    this.frontend = this.emptyFrontend();
-    this.api = this.emptyApi();
-    this.database = this.emptyDatabase();
+    this.drafts.set([]);
     this.formError.set('');
     this.saving.set(false);
+    this.showTypePicker.set(false);
+    this.pendingKind.set('');
   }
 
-  onKindChange(kind: NuevoComponenteKind | ''): void {
-    this.kind.set(kind);
+  kindLabel(kind: NuevoComponenteKind): string {
+    return this.kindOptions.find((option) => option.value === kind)?.label ?? kind;
+  }
+
+  toggleTypePicker(): void {
+    if (!this.canAddMore() && !this.showTypePicker()) return;
+    this.showTypePicker.update((open) => !open);
+    this.pendingKind.set('');
+  }
+
+  onKindSelected(kind: NuevoComponenteKind | ''): void {
+    if (!kind) return;
+    if (!this.canAddMore()) {
+      this.formError.set('Solo puedes agregar hasta 3 componentes, uno de cada tipo.');
+      return;
+    }
+    if (this.drafts().some((draft) => draft.kind === kind)) {
+      this.formError.set('Ya agregaste un componente de ese tipo.');
+      return;
+    }
+
+    this.drafts.update((list) => [...list, this.createDraft(kind)]);
+    this.pendingKind.set('');
+    this.showTypePicker.set(false);
     this.formError.set('');
-    if (kind !== 'SYSTEM') {
-      this.responsiblePersonId.set(null);
-      this.responsibleRoleId.set(null);
-    }
-    this.system = this.emptySystem();
-    this.deployments = this.emptyDeployments();
-    this.frontend = this.emptyFrontend();
-    this.api = this.emptyApi();
-    this.database = this.emptyDatabase();
-    this.technologyIds.set([]);
   }
 
-  setResponsible(personId: number | string | null): void {
-    if (personId == null || personId === '') {
-      this.responsiblePersonId.set(null);
-      return;
-    }
-    const id = Number(personId);
-    this.responsiblePersonId.set(Number.isFinite(id) ? id : null);
+  removeDraft(draftId: string): void {
+    if (this.saving()) return;
+    this.drafts.update((list) => list.filter((draft) => draft.id !== draftId));
+    this.formError.set('');
   }
 
-  setResponsibleRole(roleId: number | string | null): void {
-    if (roleId == null || roleId === '') {
-      this.responsibleRoleId.set(null);
-      return;
-    }
-    const id = Number(roleId);
-    this.responsibleRoleId.set(Number.isFinite(id) ? id : null);
+  patchCommonField(
+    draftId: string,
+    field: 'name' | 'acronym' | 'description' | 'isActive',
+    value: string,
+  ): void {
+    this.drafts.update((list) =>
+      list.map((draft) => (draft.id === draftId ? { ...draft, [field]: value } : draft)),
+    );
+  }
+
+  setResponsible(draftId: string, personId: number | string | null): void {
+    const id = this.toId(personId);
+    this.drafts.update((list) =>
+      list.map((draft) =>
+        draft.id === draftId ? { ...draft, responsiblePersonId: id } : draft,
+      ),
+    );
+  }
+
+  setResponsibleRole(draftId: string, roleId: number | string | null): void {
+    const id = this.toId(roleId);
+    this.drafts.update((list) =>
+      list.map((draft) =>
+        draft.id === draftId ? { ...draft, responsibleRoleId: id } : draft,
+      ),
+    );
+  }
+
+  patchSystemField(
+    draftId: string,
+    field: 'ownerArea' | 'criticality' | 'systemStatus' | 'goLiveDate' | 'endOfLifeDate',
+    value: string,
+  ): void {
+    this.drafts.update((list) =>
+      list.map((draft) =>
+        draft.id === draftId
+          ? { ...draft, system: { ...draft.system, [field]: value } }
+          : draft,
+      ),
+    );
+  }
+
+  patchApiField(
+    draftId: string,
+    field: 'apiVersion' | 'url' | 'protocol' | 'authenticationMethod' | 'slaDescription',
+    value: string,
+  ): void {
+    this.drafts.update((list) =>
+      list.map((draft) =>
+        draft.id === draftId ? { ...draft, api: { ...draft.api, [field]: value } } : draft,
+      ),
+    );
+  }
+
+  patchDatabaseField(
+    draftId: string,
+    field: 'engine' | 'engineVersion' | 'instanceName' | 'schemaName',
+    value: string,
+  ): void {
+    this.drafts.update((list) =>
+      list.map((draft) =>
+        draft.id === draftId
+          ? { ...draft, database: { ...draft.database, [field]: value } }
+          : draft,
+      ),
+    );
+  }
+
+  updateDeploymentUrl(draftId: string, index: number, url: string): void {
+    this.drafts.update((list) =>
+      list.map((draft) => {
+        if (draft.id !== draftId) return draft;
+        const deployments = draft.deployments.map((deployment, depIndex) =>
+          depIndex === index ? { ...deployment, url } : deployment,
+        );
+        return { ...draft, deployments };
+      }),
+    );
+  }
+
+  toggleTechnology(draftId: string, technologyId: number): void {
+    this.drafts.update((list) =>
+      list.map((draft) => {
+        if (draft.id !== draftId) return draft;
+        const selected = draft.technologyIds.includes(technologyId);
+        return {
+          ...draft,
+          technologyIds: selected
+            ? draft.technologyIds.filter((id) => id !== technologyId)
+            : [...draft.technologyIds, technologyId],
+        };
+      }),
+    );
+  }
+
+  removeTechnology(draftId: string, technologyId: number): void {
+    this.drafts.update((list) =>
+      list.map((draft) =>
+        draft.id === draftId
+          ? {
+              ...draft,
+              technologyIds: draft.technologyIds.filter((id) => id !== technologyId),
+            }
+          : draft,
+      ),
+    );
+  }
+
+  selectedTechnologies(draft: NuevoComponenteDraft): Technology[] {
+    const selected = new Set(draft.technologyIds);
+    return this.technologies().filter(
+      (tech) => tech.technologyId != null && selected.has(tech.technologyId),
+    );
+  }
+
+  availableTechnologies(draft: NuevoComponenteDraft): Technology[] {
+    const selected = new Set(draft.technologyIds);
+    return this.technologies().filter(
+      (tech) => tech.technologyId != null && !selected.has(tech.technologyId),
+    );
   }
 
   personLabel(person: Person): string {
@@ -188,33 +294,6 @@ export class NuevoComponenteModalComponent implements OnInit {
     return code ? `${name} (${code})` : name;
   }
 
-  toggleTechnology(technologyId: number): void {
-    this.technologyIds.update((ids) =>
-      ids.includes(technologyId) ? ids.filter((id) => id !== technologyId) : [...ids, technologyId],
-    );
-  }
-
-  removeTechnology(technologyId: number): void {
-    this.technologyIds.update((ids) => ids.filter((id) => id !== technologyId));
-  }
-
-  updateEnvField(
-    target: 'frontend',
-    envIndex: number,
-    field: 'version' | 'url',
-    value: string,
-  ): void {
-    this.frontend.environments = this.frontend.environments.map((env, index) =>
-      index === envIndex ? { ...env, [field]: value } : env,
-    );
-  }
-
-  updateDeploymentUrl(index: number, url: string): void {
-    this.deployments = this.deployments.map((deployment, depIndex) =>
-      depIndex === index ? { ...deployment, url } : deployment,
-    );
-  }
-
   deploymentLabel(environment: DeploymentEnvironment): string {
     return (
       this.deploymentEnvironments.find((option) => option.value === environment)?.label ??
@@ -225,174 +304,44 @@ export class NuevoComponenteModalComponent implements OnInit {
   submit(): void {
     if (this.saving()) return;
 
-    const kind = this.kind();
-    if (!kind) {
-      this.formError.set('Selecciona el tipo de componente.');
+    const drafts = this.drafts();
+    if (drafts.length === 0) {
+      this.formError.set('Agrega al menos un componente.');
       return;
     }
 
-    const componentType = this.mapKindToComponentType(kind);
-    if (!componentType) {
-      this.formError.set('Este tipo de componente aún no está listo para guardarse.');
+    const kinds = drafts.map((draft) => draft.kind);
+    if (new Set(kinds).size !== kinds.length) {
+      this.formError.set('Solo se permite un componente de cada tipo.');
       return;
     }
 
-    const name = this.form.name.trim();
-    if (!name) {
-      this.formError.set('El nombre es obligatorio.');
-      return;
-    }
-
-    if (!this.form.isActive) {
-      this.formError.set('Selecciona si el componente está activo.');
-      return;
-    }
-
-    const description = this.form.description.trim();
-    const acronym = this.form.acronym.trim();
-    const technologyIds = [...this.technologyIds()];
-
-    const responsiblePersonId = kind === 'SYSTEM' ? this.responsiblePersonId() : null;
-    const responsibleRoleId = kind === 'SYSTEM' ? this.responsibleRoleId() : null;
-
-    if (kind === 'SYSTEM') {
-      if (!this.system.systemStatus) {
-        this.formError.set('Selecciona el estado del sistema.');
-        return;
-      }
-
-      const ownerArea = this.system.ownerArea.trim();
-      if (ownerArea.length > 200) {
-        this.formError.set('El área propietaria no puede superar 200 caracteres.');
-        return;
-      }
-
-      const goLiveDate = this.system.goLiveDate.trim();
-      const endOfLifeDate = this.system.endOfLifeDate.trim();
-      if (goLiveDate && endOfLifeDate && endOfLifeDate < goLiveDate) {
-        this.formError.set(
-          'La fecha de fin de vida no puede ser anterior a la puesta en producción.',
-        );
-        return;
-      }
-
-      const hasPerson = responsiblePersonId != null;
-      const hasRole = responsibleRoleId != null;
-      if (hasPerson !== hasRole) {
-        this.formError.set('Para asignar responsable debes seleccionar persona y rol.');
-        return;
-      }
-
-      const invalidDeploymentUrl = this.deployments.some(
-        (deployment) => deployment.url.trim().length > 2000,
-      );
-      if (invalidDeploymentUrl) {
-        this.formError.set('La URL de despliegue no puede superar 2000 caracteres.');
+    for (const draft of drafts) {
+      const error = this.validateDraft(draft);
+      if (error) {
+        this.formError.set(`${this.kindLabel(draft.kind)}: ${error}`);
         return;
       }
     }
 
-    if (kind === 'API') {
-      const apiVersion = this.api.apiVersion.trim();
-      const apiUrl = this.api.url.trim();
-      const protocol = this.api.protocol.trim();
-      const authenticationMethod = this.api.authenticationMethod.trim();
-
-      if (apiVersion.length > 50) {
-        this.formError.set('La versión de API no puede superar 50 caracteres.');
-        return;
-      }
-      if (apiUrl.length > 2000) {
-        this.formError.set('La URL de API no puede superar 2000 caracteres.');
-        return;
-      }
-      if (protocol.length > 30) {
-        this.formError.set('El protocolo no puede superar 30 caracteres.');
-        return;
-      }
-      if (authenticationMethod.length > 100) {
-        this.formError.set('El método de autenticación no puede superar 100 caracteres.');
-        return;
-      }
-
-      const invalidDeploymentUrl = this.deployments.some(
-        (deployment) => deployment.url.trim().length > 2000,
-      );
-      if (invalidDeploymentUrl) {
-        this.formError.set('La URL de despliegue no puede superar 2000 caracteres.');
-        return;
-      }
-    }
-
-    if (kind === 'DATABASE') {
-      const engine = this.database.engine.trim();
-      const engineVersion = this.database.engineVersion.trim();
-      const instanceName = this.database.instanceName.trim().toLowerCase();
-      const schemaName = this.database.schemaName.trim();
-      this.database.instanceName = instanceName;
-
-      if (!engine) {
-        this.formError.set('El motor de base de datos es obligatorio.');
-        return;
-      }
-      if (engine.length > 100) {
-        this.formError.set('El motor no puede superar 100 caracteres.');
-        return;
-      }
-      if (engineVersion.length > 100) {
-        this.formError.set('La versión no puede superar 100 caracteres.');
-        return;
-      }
-      if (instanceName.length > 200) {
-        this.formError.set('La instancia no puede superar 200 caracteres.');
-        return;
-      }
-      if (schemaName.length > 200) {
-        this.formError.set('El esquema no puede superar 200 caracteres.');
-        return;
-      }
-    }
-
-    const payload: NuevoComponenteForm = {
-      kind,
-      parentComponentId: null,
-      isActive: this.form.isActive,
-      name,
-      acronym,
-      description,
-      responsiblePersonId,
-      responsibleRoleId,
-      technologyIds,
-      system: structuredClone(this.system),
-      deployments: structuredClone(this.deployments),
-      frontend: structuredClone(this.frontend),
-      api: structuredClone(this.api),
-      database: structuredClone(this.database),
-    };
-
-    const componentBody: ComponentRequest = {
-      componentType,
-      name,
-      isActive: this.form.isActive,
-    };
-    if (acronym) componentBody.acronym = acronym;
-    if (description) componentBody.description = description;
-
+    const payloads = drafts.map((draft) => this.toPayload(draft));
     this.formError.set('');
     this.saving.set(true);
 
-    this.componentsService
-      .createNewComponent(componentBody)
+    from(payloads)
       .pipe(
-        switchMap((created) => this.afterComponentCreated(created, payload)),
-        switchMap((componentId) => this.saveDeployments(componentId, payload)),
-        switchMap((componentId) => this.saveSystemResponsibility(componentId, payload)),
-        switchMap((componentId) => this.saveTechnologyStack(componentId, technologyIds)),
+        concatMap((payload) => this.saveOne(payload)),
+        toArray(),
       )
       .subscribe({
-        next: () => {
-          this.toastService.success('Componente creado correctamente');
-          this.saved.emit(payload);
+        next: (created) => {
+          const count = created.length;
+          this.toastService.success(
+            count === 1
+              ? 'Componente creado correctamente'
+              : `${count} componentes creados correctamente`,
+          );
+          this.saved.emit(created);
           this.reset();
         },
         error: (error: HttpErrorResponse) => {
@@ -400,6 +349,116 @@ export class NuevoComponenteModalComponent implements OnInit {
           this.toastService.error(this.resolveSaveError(error));
         },
       });
+  }
+
+  private validateDraft(draft: NuevoComponenteDraft): string | null {
+    const name = draft.name.trim();
+    if (!name) return 'El nombre es obligatorio.';
+    if (!draft.isActive) return 'Selecciona si el componente está activo.';
+
+    if (draft.kind === 'SYSTEM') {
+      if (!draft.system.systemStatus) return 'Selecciona el estado del sistema.';
+
+      const ownerArea = draft.system.ownerArea.trim();
+      if (ownerArea.length > 200) {
+        return 'El área propietaria no puede superar 200 caracteres.';
+      }
+
+      const goLiveDate = draft.system.goLiveDate.trim();
+      const endOfLifeDate = draft.system.endOfLifeDate.trim();
+      if (goLiveDate && endOfLifeDate && endOfLifeDate < goLiveDate) {
+        return 'La fecha de fin de vida no puede ser anterior a la puesta en producción.';
+      }
+
+      const hasPerson = draft.responsiblePersonId != null;
+      const hasRole = draft.responsibleRoleId != null;
+      if (hasPerson !== hasRole) {
+        return 'Para asignar responsable debes seleccionar persona y rol.';
+      }
+
+      if (draft.deployments.some((deployment) => deployment.url.trim().length > 2000)) {
+        return 'La URL de despliegue no puede superar 2000 caracteres.';
+      }
+    }
+
+    if (draft.kind === 'API') {
+      if (draft.api.apiVersion.trim().length > 50) {
+        return 'La versión de API no puede superar 50 caracteres.';
+      }
+      if (draft.api.url.trim().length > 2000) {
+        return 'La URL de API no puede superar 2000 caracteres.';
+      }
+      if (draft.api.protocol.trim().length > 30) {
+        return 'El protocolo no puede superar 30 caracteres.';
+      }
+      if (draft.api.authenticationMethod.trim().length > 100) {
+        return 'El método de autenticación no puede superar 100 caracteres.';
+      }
+      if (draft.deployments.some((deployment) => deployment.url.trim().length > 2000)) {
+        return 'La URL de despliegue no puede superar 2000 caracteres.';
+      }
+    }
+
+    if (draft.kind === 'DATABASE') {
+      const engine = draft.database.engine.trim();
+      if (!engine) return 'El motor de base de datos es obligatorio.';
+      if (engine.length > 100) return 'El motor no puede superar 100 caracteres.';
+      if (draft.database.engineVersion.trim().length > 100) {
+        return 'La versión no puede superar 100 caracteres.';
+      }
+      if (draft.database.instanceName.trim().length > 200) {
+        return 'La instancia no puede superar 200 caracteres.';
+      }
+      if (draft.database.schemaName.trim().length > 200) {
+        return 'El esquema no puede superar 200 caracteres.';
+      }
+    }
+
+    return null;
+  }
+
+  private toPayload(draft: NuevoComponenteDraft): NuevoComponenteForm {
+    const { id: _id, ...rest } = draft;
+    return {
+      ...structuredClone(rest),
+      name: draft.name.trim(),
+      acronym: draft.acronym.trim(),
+      description: draft.description.trim(),
+      responsiblePersonId: draft.kind === 'SYSTEM' ? draft.responsiblePersonId : null,
+      responsibleRoleId: draft.kind === 'SYSTEM' ? draft.responsibleRoleId : null,
+      technologyIds: [...draft.technologyIds],
+    };
+  }
+
+  private saveOne(payload: NuevoComponenteForm): Observable<NuevoComponenteForm> {
+    const componentType = this.mapKindToComponentType(payload.kind);
+    if (!componentType) {
+      return throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            statusText: 'Tipo de componente no soportado.',
+          }),
+      );
+    }
+
+    const componentBody: ComponentRequest = {
+      componentType,
+      name: payload.name,
+      isActive: payload.isActive,
+    };
+    if (payload.acronym) componentBody.acronym = payload.acronym;
+    if (payload.description) componentBody.description = payload.description;
+
+    return this.componentsService.createNewComponent(componentBody).pipe(
+      switchMap((created) => this.afterComponentCreated(created, payload)),
+      switchMap((componentId) => this.saveDeployments(componentId, payload)),
+      switchMap((componentId) => this.saveSystemResponsibility(componentId, payload)),
+      switchMap((componentId) =>
+        this.saveTechnologyStack(componentId, payload.technologyIds),
+      ),
+      switchMap(() => of(payload)),
+    );
   }
 
   private afterComponentCreated(
@@ -574,57 +633,54 @@ export class NuevoComponenteModalComponent implements OnInit {
     }
   }
 
-  private emptyCommonForm() {
+  private createDraft(kind: NuevoComponenteKind): NuevoComponenteDraft {
     return {
-      isActive: 'Y' as const,
+      id: `cmp-${++this.seq}`,
+      kind,
+      parentComponentId: null,
+      isActive: 'Y',
       name: '',
       acronym: '',
       description: '',
+      responsiblePersonId: null,
+      responsibleRoleId: null,
+      technologyIds: [],
+      system: {
+        ownerArea: '',
+        criticality: '',
+        systemStatus: 'ACTIVE',
+        goLiveDate: '',
+        endOfLifeDate: '',
+      },
+      deployments: DEPLOYMENT_ENVIRONMENTS.map((option) => ({
+        environment: option.value,
+        url: '',
+      })),
+      frontend: { environments: this.emptyEnvironments() },
+      api: {
+        apiVersion: '',
+        url: '',
+        protocol: '',
+        authenticationMethod: '',
+        slaDescription: '',
+      },
+      database: {
+        engine: '',
+        engineVersion: '',
+        instanceName: '',
+        schemaName: '',
+      },
     };
-  }
-
-  private emptySystem() {
-    return {
-      ownerArea: '',
-      criticality: '' as const,
-      systemStatus: 'ACTIVE' as const,
-      goLiveDate: '',
-      endOfLifeDate: '',
-    };
-  }
-
-  private emptyDeployments() {
-    return DEPLOYMENT_ENVIRONMENTS.map((option) => ({
-      environment: option.value,
-      url: '',
-    }));
   }
 
   private emptyEnvironments(): EnvConfig[] {
     return ENVIRONMENT_CODES.map((env) => ({ env, version: '', url: '' }));
   }
 
-  private emptyFrontend() {
-    return { environments: this.emptyEnvironments() };
-  }
-
-  private emptyApi() {
-    return {
-      apiVersion: '',
-      url: '',
-      protocol: '',
-      authenticationMethod: '',
-      slaDescription: '',
-    };
-  }
-
-  private emptyDatabase() {
-    return {
-      engine: '',
-      engineVersion: '',
-      instanceName: '',
-      schemaName: '',
-    };
+  private toId(value: number | string | null | undefined): number | null {
+    if (value == null || value === '') return null;
+    const id = Number(value);
+    return Number.isFinite(id) ? id : null;
   }
 
   private loadCatalogs(): void {

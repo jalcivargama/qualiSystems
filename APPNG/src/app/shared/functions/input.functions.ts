@@ -95,3 +95,31 @@ export const transformPasteToLowerCase = (event: ClipboardEvent, maxLength?: num
     inputElement.setSelectionRange(caret, caret);
     inputElement.dispatchEvent(new Event('input', { bubbles: true }));
 }
+
+/**
+ * Normaliza texto pegado a mayúsculas respetando maxLength.
+ */
+export const transformPasteToUpperCase = (event: ClipboardEvent, maxLength?: number) => {
+    const inputElement = event.target as HTMLInputElement;
+    if (!inputElement) return;
+
+    event.preventDefault();
+
+    let pasted = (event.clipboardData?.getData('text') ?? '').toUpperCase();
+    if (!pasted) return;
+
+    const start = inputElement.selectionStart || 0;
+    const end = inputElement.selectionEnd || 0;
+    const value = inputElement.value;
+
+    if (maxLength) {
+        const available = maxLength - (value.length - (end - start));
+        if (available <= 0) return;
+        pasted = pasted.slice(0, available);
+    }
+
+    inputElement.value = value.slice(0, start) + pasted + value.slice(end);
+    const caret = start + pasted.length;
+    inputElement.setSelectionRange(caret, caret);
+    inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+}

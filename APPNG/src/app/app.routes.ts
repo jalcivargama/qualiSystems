@@ -15,6 +15,7 @@ import { DesplieguesComponent } from './modules/operacion/components/despliegues
 import { PersonasComponent } from './modules/personas-y-roles/components/personas/personas.component';
 import { RolesDeResponsabilidadComponent } from './modules/personas-y-roles/components/roles-de-responsabilidad/roles-de-responsabilidad.component';
 import { ResponsablesDeSistemasComponent } from './modules/personas-y-roles/components/responsables-de-sistemas/responsables-de-sistemas.component';
+import { AreasComponent } from './modules/areas/components/areas/areas.component';
 import { TecnologiasComponent } from './modules/tecnologia/components/tecnologias/tecnologias.component';
 import { StackTecnologicoComponent } from './modules/tecnologia/components/stack-tecnologico/stack-tecnologico.component';
 import { TiposDeDependenciaComponent } from './modules/dependencias/components/tipos-de-dependencia/tipos-de-dependencia.component';
@@ -49,6 +50,7 @@ export const routes: Routes = [
       { path: 'catalogos/responsibility_role', component: RolesDeResponsabilidadComponent },
       { path: 'catalogos/system_responsibility', component: ResponsablesDeSistemasComponent },
       { path: 'system_responsibility', component: ResponsablesDeSistemasComponent },
+      { path: 'catalogos/area', component: AreasComponent },
       { path: 'catalogos/technology', component: TecnologiasComponent },
       { path: 'catalogos/component_technology', component: StackTecnologicoComponent },
       { path: 'catalogos/dependency_type', component: TiposDeDependenciaComponent },
