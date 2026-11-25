@@ -202,6 +202,20 @@
             />
           </div>
 
+          <div class="form-field">
+            <label for="field-resourceType">Tipo de recurso</label>
+            <select
+              id="field-resourceType"
+              name="resourceType"
+              [(ngModel)]="form.resourceType"
+            >
+              <option value="">Selecciona tipo…</option>
+              @for (option of resourceTypeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+
           <div class="form-field full-width">
             <label for="field-description">Descripción</label>
             <textarea

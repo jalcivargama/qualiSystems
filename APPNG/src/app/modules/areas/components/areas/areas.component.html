@@ -164,17 +164,14 @@
 
           <div class="form-field full-width">
             <label for="field-contactPersonId">Persona de contacto</label>
-            <select
+            <app-searchable-select
               id="field-contactPersonId"
               name="contactPersonId"
+              [options]="peopleOptions()"
+              placeholder="Sin contacto"
               [ngModel]="form.contactPersonId"
               (ngModelChange)="onContactPersonIdChange($event)"
-            >
-              <option [ngValue]="null">Sin contacto</option>
-              @for (person of people(); track person.personId) {
-                <option [ngValue]="+person.personId!">{{ personOptionLabel(person) }}</option>
-              }
-            </select>
+            />
           </div>
         </div>
 

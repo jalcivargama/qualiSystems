@@ -85,6 +85,21 @@
                     />
                   </div>
 
+                  <div class="form-field">
+                    <label [attr.for]="'nc-resourceType-' + draft.id">Tipo de recurso</label>
+                    <select
+                      [id]="'nc-resourceType-' + draft.id"
+                      [name]="'resourceType-' + draft.id"
+                      [ngModel]="draft.resourceType"
+                      (ngModelChange)="patchCommonField(draft.id, 'resourceType', $event)"
+                    >
+                      <option value="">Selecciona tipo…</option>
+                      @for (option of resourceTypeOptions; track option.value) {
+                        <option [value]="option.value">{{ option.label }}</option>
+                      }
+                    </select>
+                  </div>
+
                   <div class="form-field full-width">
                     <label [attr.for]="'nc-description-' + draft.id">Descripción</label>
                     <textarea
@@ -100,32 +115,26 @@
                   @if (draft.kind === 'SYSTEM') {
                     <div class="form-field">
                       <label [attr.for]="'nc-responsable-' + draft.id">Responsable</label>
-                      <select
+                      <app-searchable-select
                         [id]="'nc-responsable-' + draft.id"
                         [name]="'responsable-' + draft.id"
+                        [options]="peopleOptions()"
+                        placeholder="Selecciona un responsable…"
                         [ngModel]="draft.responsiblePersonId"
                         (ngModelChange)="setResponsible(draft.id, $event)"
-                      >
-                        <option [ngValue]="null">Selecciona un responsable…</option>
-                        @for (person of availablePeople(); track person.personId) {
-                          <option [ngValue]="person.personId">{{ personLabel(person) }}</option>
-                        }
-                      </select>
+                      />
                     </div>
 
                     <div class="form-field">
                       <label [attr.for]="'nc-responsibility-role-' + draft.id">Rol</label>
-                      <select
+                      <app-searchable-select
                         [id]="'nc-responsibility-role-' + draft.id"
                         [name]="'responsibleRoleId-' + draft.id"
+                        [options]="roleOptions()"
+                        placeholder="Selecciona un rol…"
                         [ngModel]="draft.responsibleRoleId"
                         (ngModelChange)="setResponsibleRole(draft.id, $event)"
-                      >
-                        <option [ngValue]="null">Selecciona un rol…</option>
-                        @for (role of availableRoles(); track role.roleId) {
-                          <option [ngValue]="role.roleId">{{ roleLabel(role) }}</option>
-                        }
-                      </select>
+                      />
                     </div>
                   }
                 </div>
@@ -239,7 +248,7 @@
                       </div>
 
                       <div class="form-field full-width">
-                        <label [attr.for]="'nc-api-url-' + draft.id">URL</label>
+                        <label [attr.for]="'nc-api-url-' + draft.id">URL Estado del API</label>
                         <input
                           [id]="'nc-api-url-' + draft.id"
                           [name]="'apiUrl-' + draft.id"
@@ -248,6 +257,32 @@
                           (ngModelChange)="patchApiField(draft.id, 'url', $event)"
                           maxlength="2000"
                           placeholder="https://api.ejemplo.com/v1"
+                        />
+                      </div>
+
+                      <div class="form-field full-width">
+                        <label [attr.for]="'nc-api-urlDoc-' + draft.id">URL Documentación del API</label>
+                        <input
+                          [id]="'nc-api-urlDoc-' + draft.id"
+                          [name]="'apiUrlDoc-' + draft.id"
+                          type="url"
+                          [ngModel]="draft.api.urlDoc"
+                          (ngModelChange)="patchApiField(draft.id, 'urlDoc', $event)"
+                          maxlength="2000"
+                          placeholder="https://docs.ejemplo.com/api"
+                        />
+                      </div>
+
+                      <div class="form-field">
+                        <label [attr.for]="'nc-api-certificateValidity-' + draft.id">
+                          Validez del certificado
+                        </label>
+                        <input
+                          [id]="'nc-api-certificateValidity-' + draft.id"
+                          [name]="'apiCertificateValidity-' + draft.id"
+                          type="date"
+                          [ngModel]="draft.api.certificateValidity"
+                          (ngModelChange)="patchApiField(draft.id, 'certificateValidity', $event)"
                         />
                       </div>
 

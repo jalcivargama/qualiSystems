@@ -123,38 +123,30 @@
         <div class="form-grid">
           <div class="form-field">
             <label for="field-componentId">Componente <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-componentId"
               name="componentId"
+              [options]="componentOptions()"
+              placeholder="Selecciona un componente"
               [ngModel]="form.componentId"
               (ngModelChange)="onComponentIdChange($event)"
-              required
               [disabled]="isEditing()"
-            >
-              <option [ngValue]="null">Selecciona un componente</option>
-              @for (component of components(); track component.componentId) {
-                <option [ngValue]="+component.componentId!">{{ componentOptionLabel(component) }}</option>
-              }
-            </select>
+              required
+            />
           </div>
 
           @if (isEditing()) {
             <div class="form-field">
               <label for="field-technologyId">Tecnología <i>*</i></label>
-              <select
+              <app-searchable-select
                 id="field-technologyId"
                 name="technologyId"
+                [options]="technologySelectOptions()"
+                placeholder="Selecciona una tecnología"
                 [ngModel]="form.technologyId"
+                [disabled]="true"
                 required
-                disabled
-              >
-                <option [ngValue]="null">Selecciona una tecnología</option>
-                @for (technology of technologies(); track technology.technologyId) {
-                  <option [ngValue]="+technology.technologyId!">
-                    {{ technologyOptionLabel(technology) }}
-                  </option>
-                }
-              </select>
+              />
             </div>
           }
 

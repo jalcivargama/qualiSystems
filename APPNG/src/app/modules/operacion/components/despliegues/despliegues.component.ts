@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
 import { CatalogComponent } from '../../../catalogo-principal/components/componentes/models/component.model';
 import { SystemDetailsService } from '../../../catalogo-principal/components/sistemas/system-details.service';
@@ -26,7 +28,7 @@ type DeploymentForm = {
 
 @Component({
   selector: 'app-despliegues',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './despliegues.component.html',
   styleUrl: './despliegues.component.css',
 })
@@ -75,6 +77,14 @@ export class DesplieguesComponent implements OnInit {
       .filter((item): item is { componentId: number; name: string } => item != null)
       .sort((a, b) => a.name.localeCompare(b.name, 'es'));
   });
+
+  readonly systemOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableSystems().map((system) => ({
+      value: system.componentId,
+      label: system.name,
+      group: 'SISTEMA',
+    })),
+  );
 
   readonly availableEnvironments = computed(() => {
     const componentId = this.selectedComponentId();

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
 import { CatalogComponent } from '../../../catalogo-principal/components/componentes/models/component.model';
 import { PeopleService } from '../personas/people.service';
@@ -24,7 +26,7 @@ type SystemResponsibilityForm = {
 
 @Component({
   selector: 'app-responsables-de-sistemas',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './responsables-de-sistemas.component.html',
   styleUrl: './responsables-de-sistemas.component.css',
 })
@@ -94,6 +96,35 @@ export class ResponsablesDeSistemasComponent implements OnInit {
       return Number.isFinite(id) && !usedRoleIds.has(id);
     });
   });
+
+  readonly systemComponentOptions = computed<SearchableSelectOption[]>(() =>
+    this.systemComponents().map((component) => ({
+      value: Number(component.componentId),
+      label: component.name?.trim() || String(component.componentId),
+      group: 'SISTEMA',
+      searchText: component.acronym?.trim() || '',
+    })),
+  );
+
+  readonly peopleOptions = computed<SearchableSelectOption[]>(() =>
+    this.people()
+      .filter((person) => person.personId != null)
+      .map((person) => ({
+        value: Number(person.personId),
+        label: person.fullName?.trim() || String(person.personId),
+        searchText: person.email?.trim() || '',
+      })),
+  );
+
+  readonly roleOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableRoles()
+      .filter((role) => role.roleId != null)
+      .map((role) => ({
+        value: Number(role.roleId),
+        label: role.roleName?.trim() || String(role.roleId),
+        searchText: role.roleCode?.trim() || '',
+      })),
+  );
 
   ngOnInit(): void {
     this.loadSystemResponsibilities();

@@ -66,8 +66,10 @@ export class DependencyConnectionsDirective implements AfterViewInit, OnDestroy 
 
       const flow = child.dataset['flowTipe'];
       if (flow === 'I' || flow === 'O' || flow === 'B') {
-        elements.push(this.marker(startX, 0, flow === 'I', true));
-        elements.push(this.marker(endX, endY, flow !== 'I', false));
+        const arrowAtStart = flow === 'I' || flow === 'B';
+        const arrowAtEnd = flow === 'O' || flow === 'B';
+        elements.push(this.marker(startX, 0, arrowAtStart, true));
+        elements.push(this.marker(endX, endY, arrowAtEnd, false));
       }
     });
     svg.replaceChildren(...elements);

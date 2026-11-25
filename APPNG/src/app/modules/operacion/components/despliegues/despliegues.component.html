@@ -123,21 +123,16 @@
         <div class="form-grid">
           <div class="form-field full-width">
             <label for="field-componentId">Sistema <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-componentId"
               name="componentId"
+              [options]="systemOptions()"
+              placeholder="Selecciona un sistema"
               [ngModel]="form.componentId"
               (ngModelChange)="onComponentIdChange($event)"
+              [disabled]="isEditing()"
               required
-            >
-              <option [ngValue]="null">Selecciona un sistema</option>
-              <option
-                *ngFor="let system of availableSystems()"
-                [ngValue]="system.componentId"
-              >
-                {{ system.name }}
-              </option>
-            </select>
+            />
             <small class="field-hint">Solo sistemas con detalle de sistema registrado.</small>
             @if (availableSystems().length === 0) {
               <small class="field-hint">No hay system-details disponibles para asociar.</small>

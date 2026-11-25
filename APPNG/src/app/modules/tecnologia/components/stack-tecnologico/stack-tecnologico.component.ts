@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
 import {
   CatalogComponent,
@@ -30,7 +32,7 @@ type ComponentTechnologyForm = {
 
 @Component({
   selector: 'app-stack-tecnologico',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './stack-tecnologico.component.html',
   styleUrl: './stack-tecnologico.component.css',
 })
@@ -98,6 +100,36 @@ export class StackTecnologicoComponent implements OnInit {
       ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query)),
     );
   });
+
+  readonly componentOptions = computed<SearchableSelectOption[]>(() =>
+    this.components()
+      .filter((component) => component.componentId != null)
+      .map((component) => {
+        const typeLabel =
+          this.componentTypeLabels[component.componentType as ComponentType] ??
+          component.componentType ??
+          '';
+        return {
+          value: Number(component.componentId),
+          label: component.name?.trim() || String(component.componentId),
+          group: typeLabel,
+          searchText: `${component.acronym ?? ''} ${typeLabel}`,
+        };
+      }),
+  );
+
+  readonly technologySelectOptions = computed<SearchableSelectOption[]>(() =>
+    this.technologies()
+      .filter((technology) => technology.technologyId != null)
+      .map((technology) => ({
+        value: Number(technology.technologyId),
+        label: technology.name?.trim() || String(technology.technologyId),
+        group:
+          this.categoryLabels[technology.category as TechnologyCategory] ??
+          technology.category ??
+          '',
+      })),
+  );
 
   readonly usedTechnologyIdsForComponent = computed(() => {
     const componentId = this.selectedComponentId();

@@ -130,20 +130,15 @@
         <div class="form-grid">
           <div class="form-field full-width">
             <label for="field-dependencyId">Dependencia <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-dependencyId"
               name="dependencyId"
+              [options]="dependencyOptions()"
+              placeholder="Selecciona una dependencia"
               [ngModel]="form.dependencyId"
               (ngModelChange)="onDependencyIdChange($event)"
               required
-            >
-              <option [ngValue]="null">Selecciona una dependencia</option>
-              @for (dependency of dependencies(); track dependency.dependencyId) {
-                <option [ngValue]="+dependency.dependencyId!">
-                  {{ dependencyLabel(dependency.dependencyId) }}
-                </option>
-              }
-            </select>
+            />
           </div>
 
           <div class="form-field full-width">

@@ -53,11 +53,33 @@ export class BusquedaComponentesComponent implements OnInit {
 
   technologies: Technology[] = [];
   people: Person[] = [];
+  technologyFilter = '';
+  peopleFilter = '';
   results: ComponentSearchResult[] = [];
   loadingOptions = false;
   searching = false;
   hasSearched = false;
   form: SearchForm = this.emptyForm();
+
+  get filteredTechnologies(): Technology[] {
+    const query = this.technologyFilter.trim().toLocaleLowerCase();
+    if (!query) return this.technologies;
+    return this.technologies.filter((technology) =>
+      [technology.name, technology.category].some((value) =>
+        String(value ?? '').toLocaleLowerCase().includes(query),
+      ),
+    );
+  }
+
+  get filteredPeople(): Person[] {
+    const query = this.peopleFilter.trim().toLocaleLowerCase();
+    if (!query) return this.people;
+    return this.people.filter((person) =>
+      [person.fullName, person.email].some((value) =>
+        String(value ?? '').toLocaleLowerCase().includes(query),
+      ),
+    );
+  }
 
   ngOnInit(): void {
     this.loadOptions();

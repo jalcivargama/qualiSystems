@@ -10,21 +10,15 @@
 
 <section class="explorer-toolbar">
   <label for="component-selector">Componente inicial</label>
-  <select
+  <app-searchable-select
     id="component-selector"
-    [(ngModel)]="selectedId"
-    (ngModelChange)="selectComponent($event)"
+    name="componentSelector"
+    [options]="componentOptions()"
+    [placeholder]="loadingComponents ? 'Cargando componentes...' : 'Selecciona un componente del catálogo'"
+    [ngModel]="selectedId || null"
+    (ngModelChange)="onComponentSelected($event)"
     [disabled]="loadingComponents"
-  >
-    <option value="">
-      {{ loadingComponents ? 'Cargando componentes...' : 'Selecciona un componente del catálogo' }}
-    </option>
-    @for (component of components; track component['component_id']) {
-      <option [value]="String(component['component_id'])">
-        {{ component['name'] }} · {{ explorer.componentType(component) }}{{ component['acronym'] ? ' · ' + component['acronym'] : '' }}
-      </option>
-    }
-  </select>
+  />
   <div class="direction-note"><span>↘</span> Origen → proveedor / destino</div>
 </section>
 

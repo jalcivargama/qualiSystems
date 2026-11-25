@@ -93,7 +93,7 @@ describe('ExploradorDependenciasComponent', () => {
     expect(Array.from(svg.children).map((element) => element.tagName.toLowerCase())).toEqual([
       'path', 'polygon', 'circle',
       'path', 'circle', 'polygon',
-      'path', 'circle', 'polygon',
+      'path', 'polygon', 'polygon',
       'path',
     ]);
     expect(svg.children[1].getAttribute('points')).toContain(',0 ');

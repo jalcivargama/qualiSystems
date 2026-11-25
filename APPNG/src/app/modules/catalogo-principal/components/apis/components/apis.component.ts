@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../componentes/components.service';
 import { CatalogComponent } from '../../componentes/models/component.model';
 import { ApisService } from '../apis.service';
@@ -19,6 +21,8 @@ type ApiForm = {
   componentId: number | null;
   apiVersion: string;
   url: string;
+  urlDoc: string;
+  certificateValidity: string;
   protocol: string;
   authenticationMethod: string;
   slaDescription: string;
@@ -26,7 +30,7 @@ type ApiForm = {
 
 @Component({
   selector: 'app-apis',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './apis.component.html',
   styleUrl: './apis.component.css',
 })
@@ -64,6 +68,15 @@ export class ApisComponent implements OnInit {
     });
   });
 
+  readonly apiComponentOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableApiComponents().map((component) => ({
+      value: Number(component.componentId),
+      label: component.name?.trim() || String(component.componentId),
+      group: 'API',
+      searchText: component.acronym?.trim() || '',
+    })),
+  );
+
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
     const rows = this.rows();
@@ -73,6 +86,8 @@ export class ApisComponent implements OnInit {
         this.componentName(row.componentId),
         row.apiVersion,
         row.url,
+        row.urlDoc,
+        row.certificateValidity,
         row.protocol,
         row.authenticationMethod,
         row.slaDescription,
@@ -123,6 +138,8 @@ export class ApisComponent implements OnInit {
       componentId,
       apiVersion: row.apiVersion ?? '',
       url: row.url ?? '',
+      urlDoc: row.urlDoc ?? '',
+      certificateValidity: row.certificateValidity ?? '',
       protocol: row.protocol ?? '',
       authenticationMethod: row.authenticationMethod ?? '',
       slaDescription: row.slaDescription ?? '',
@@ -181,6 +198,8 @@ export class ApisComponent implements OnInit {
 
     const apiVersion = this.form.apiVersion.trim();
     const url = this.form.url.trim();
+    const urlDoc = this.form.urlDoc.trim();
+    const certificateValidity = this.form.certificateValidity.trim();
     const protocol = this.form.protocol.trim();
     const authenticationMethod = this.form.authenticationMethod.trim();
     const slaDescription = this.form.slaDescription.trim();
@@ -190,7 +209,15 @@ export class ApisComponent implements OnInit {
       return;
     }
     if (url.length > 2000) {
-      this.formError.set('La URL no puede superar 2000 caracteres.');
+      this.formError.set('La URL Estado del API no puede superar 2000 caracteres.');
+      return;
+    }
+    if (urlDoc.length > 2000) {
+      this.formError.set('La URL Documentación del API no puede superar 2000 caracteres.');
+      return;
+    }
+    if (certificateValidity && !/^\d{4}-\d{2}-\d{2}$/.test(certificateValidity)) {
+      this.formError.set('La validez del certificado debe tener formato YYYY-MM-DD.');
       return;
     }
     if (protocol.length > 30) {
@@ -211,6 +238,8 @@ export class ApisComponent implements OnInit {
         componentId,
         apiVersion: apiVersion || null,
         url: url || null,
+        urlDoc: urlDoc || null,
+        certificateValidity: certificateValidity || null,
         protocol: protocol || null,
         authenticationMethod: authenticationMethod || null,
         slaDescription: slaDescription || null,
@@ -233,6 +262,8 @@ export class ApisComponent implements OnInit {
     const createBody: ApiDetailRequest = { componentId };
     if (apiVersion) createBody.apiVersion = apiVersion;
     if (url) createBody.url = url;
+    if (urlDoc) createBody.urlDoc = urlDoc;
+    if (certificateValidity) createBody.certificateValidity = certificateValidity;
     if (protocol) createBody.protocol = protocol;
     if (authenticationMethod) createBody.authenticationMethod = authenticationMethod;
     if (slaDescription) createBody.slaDescription = slaDescription;
@@ -288,6 +319,8 @@ export class ApisComponent implements OnInit {
       componentId: null,
       apiVersion: '',
       url: '',
+      urlDoc: '',
+      certificateValidity: '',
       protocol: '',
       authenticationMethod: '',
       slaDescription: '',

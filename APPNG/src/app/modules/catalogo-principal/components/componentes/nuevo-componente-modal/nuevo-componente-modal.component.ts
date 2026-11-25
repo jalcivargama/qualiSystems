@@ -25,6 +25,9 @@ import {
   transformInputToLowerCase,
   transformPasteToLowerCase,
 } from '../../../../../shared/functions/input.functions';
+import { TIPOS_RECURSOS_OPTIONS } from '../../../../../shared/enum/tipos.recuros.enum';
+import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
 import {
   CRITICALITY_OPTIONS,
   DEPLOYMENT_ENVIRONMENTS,
@@ -42,7 +45,7 @@ import {
 
 @Component({
   selector: 'app-nuevo-componente-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchableSelectComponent],
   templateUrl: './nuevo-componente-modal.component.html',
   styleUrl: './nuevo-componente-modal.component.css',
 })
@@ -83,6 +86,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly criticalityOptions = CRITICALITY_OPTIONS;
   readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
   readonly deploymentEnvironments = DEPLOYMENT_ENVIRONMENTS;
+  readonly resourceTypeOptions = TIPOS_RECURSOS_OPTIONS;
   readonly maxComponents = MAX_NUEVO_COMPONENTES;
   readonly transformToLowerCase = transformInputToLowerCase;
   readonly transformPasteToLower = transformPasteToLowerCase;
@@ -98,6 +102,22 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   readonly availableRoles = computed(() =>
     this.roles().filter((role) => role.roleId != null),
+  );
+
+  readonly peopleOptions = computed<SearchableSelectOption[]>(() =>
+    this.availablePeople().map((person) => ({
+      value: Number(person.personId),
+      label: person.fullName?.trim() || String(person.personId),
+      searchText: person.email?.trim() || '',
+    })),
+  );
+
+  readonly roleOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableRoles().map((role) => ({
+      value: Number(role.roleId),
+      label: role.roleName?.trim() || String(role.roleId),
+      searchText: role.roleCode?.trim() || '',
+    })),
   );
 
   readonly availableKindOptions = computed(() => {
@@ -162,7 +182,7 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   patchCommonField(
     draftId: string,
-    field: 'name' | 'acronym' | 'description' | 'isActive',
+    field: 'name' | 'acronym' | 'resourceType' | 'description' | 'isActive',
     value: string,
   ): void {
     this.drafts.update((list) =>
@@ -204,7 +224,14 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   patchApiField(
     draftId: string,
-    field: 'apiVersion' | 'url' | 'protocol' | 'authenticationMethod' | 'slaDescription',
+    field:
+      | 'apiVersion'
+      | 'url'
+      | 'urlDoc'
+      | 'certificateValidity'
+      | 'protocol'
+      | 'authenticationMethod'
+      | 'slaDescription',
     value: string,
   ): void {
     this.drafts.update((list) =>
@@ -386,7 +413,14 @@ export class NuevoComponenteModalComponent implements OnInit {
         return 'La versión de API no puede superar 50 caracteres.';
       }
       if (draft.api.url.trim().length > 2000) {
-        return 'La URL de API no puede superar 2000 caracteres.';
+        return 'La URL Estado del API no puede superar 2000 caracteres.';
+      }
+      if (draft.api.urlDoc.trim().length > 2000) {
+        return 'La URL Documentación del API no puede superar 2000 caracteres.';
+      }
+      const certificateValidity = draft.api.certificateValidity.trim();
+      if (certificateValidity && !/^\d{4}-\d{2}-\d{2}$/.test(certificateValidity)) {
+        return 'La validez del certificado debe tener formato YYYY-MM-DD.';
       }
       if (draft.api.protocol.trim().length > 30) {
         return 'El protocolo no puede superar 30 caracteres.';
@@ -423,6 +457,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       ...structuredClone(rest),
       name: draft.name.trim(),
       acronym: draft.acronym.trim(),
+      resourceType: draft.resourceType.trim(),
       description: draft.description.trim(),
       responsiblePersonId: draft.kind === 'SYSTEM' ? draft.responsiblePersonId : null,
       responsibleRoleId: draft.kind === 'SYSTEM' ? draft.responsibleRoleId : null,
@@ -448,6 +483,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       isActive: payload.isActive,
     };
     if (payload.acronym) componentBody.acronym = payload.acronym;
+    if (payload.resourceType) componentBody.resourceType = payload.resourceType;
     if (payload.description) componentBody.description = payload.description;
 
     return this.componentsService.createNewComponent(componentBody).pipe(
@@ -521,6 +557,8 @@ export class NuevoComponenteModalComponent implements OnInit {
   ): Observable<number> {
     const apiVersion = payload.api.apiVersion.trim();
     const url = payload.api.url.trim();
+    const urlDoc = payload.api.urlDoc.trim();
+    const certificateValidity = payload.api.certificateValidity.trim();
     const protocol = payload.api.protocol.trim();
     const authenticationMethod = payload.api.authenticationMethod.trim();
     const slaDescription = payload.api.slaDescription.trim();
@@ -528,6 +566,8 @@ export class NuevoComponenteModalComponent implements OnInit {
     const apiBody: ApiDetailRequest = { componentId };
     if (apiVersion) apiBody.apiVersion = apiVersion;
     if (url) apiBody.url = url;
+    if (urlDoc) apiBody.urlDoc = urlDoc;
+    if (certificateValidity) apiBody.certificateValidity = certificateValidity;
     if (protocol) apiBody.protocol = protocol;
     if (authenticationMethod) apiBody.authenticationMethod = authenticationMethod;
     if (slaDescription) apiBody.slaDescription = slaDescription;
@@ -641,6 +681,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       isActive: 'Y',
       name: '',
       acronym: '',
+      resourceType: '',
       description: '',
       responsiblePersonId: null,
       responsibleRoleId: null,
@@ -660,6 +701,8 @@ export class NuevoComponenteModalComponent implements OnInit {
       api: {
         apiVersion: '',
         url: '',
+        urlDoc: '',
+        certificateValidity: '',
         protocol: '',
         authenticationMethod: '',
         slaDescription: '',

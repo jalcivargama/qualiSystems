@@ -28,6 +28,8 @@ export type FrontendDetails = {
 export type ApiDetails = {
   apiVersion: string;
   url: string;
+  urlDoc: string;
+  certificateValidity: string;
   protocol: string;
   authenticationMethod: string;
   slaDescription: string;
@@ -54,6 +56,7 @@ export type NuevoComponenteForm = {
   isActive: ActiveFlag;
   name: string;
   acronym: string;
+  resourceType: string;
   description: string;
   responsiblePersonId: number | null;
   responsibleRoleId: number | null;

@@ -1,0 +1,54 @@
+<div class="searchable-select" [class.open]="open()" [class.disabled]="isDisabled">
+  <button
+    type="button"
+    class="select-trigger"
+    [disabled]="isDisabled"
+    [attr.aria-expanded]="open()"
+    aria-haspopup="listbox"
+    (click)="toggle()"
+  >
+    <span class="select-value" [class.placeholder]="!selectedLabel()">
+      {{ selectedLabel() || placeholder() }}
+    </span>
+    <span class="select-actions">
+      @if (clearable() && selectedLabel() && !isDisabled) {
+        <span class="clear-btn" role="button" tabindex="-1" (click)="clear($event)" title="Limpiar">×</span>
+      }
+      <span class="caret">▾</span>
+    </span>
+  </button>
+
+  @if (open()) {
+    <div class="select-panel" role="listbox">
+      <label class="search-box">
+        <span>⌕</span>
+        <input
+          type="text"
+          [value]="query()"
+          (input)="onQueryInput($event)"
+          [placeholder]="searchPlaceholder()"
+          autocomplete="off"
+          (click)="$event.stopPropagation()"
+        />
+      </label>
+
+      <div class="options-scroll">
+        @for (option of filteredOptions(); track option.value) {
+          <button
+            type="button"
+            class="option"
+            [class.selected]="isSelected(option)"
+            (click)="select(option)"
+          >
+            <span class="option-label">{{ option.label }}</span>
+            @if (option.group) {
+              <span class="option-group">{{ option.group }}</span>
+            }
+          </button>
+        } @empty {
+          <div class="empty">{{ emptyLabel() }}</div>
+        }
+      </div>
+    </div>
+  }
+</div>

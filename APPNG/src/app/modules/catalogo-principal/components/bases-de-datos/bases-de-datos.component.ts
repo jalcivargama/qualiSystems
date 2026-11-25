@@ -8,6 +8,8 @@ import {
   transformInputToLowerCase,
   transformPasteToLowerCase,
 } from '../../../../shared/functions/input.functions';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../componentes/components.service';
 import { CatalogComponent } from '../componentes/models/component.model';
 import { DatabaseDetailsService } from './database-details.service';
@@ -29,7 +31,7 @@ type DatabaseForm = {
 
 @Component({
   selector: 'app-bases-de-datos',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './bases-de-datos.component.html',
   styleUrl: './bases-de-datos.component.css',
 })
@@ -67,6 +69,15 @@ export class BasesDeDatosComponent implements OnInit {
       return type === 'DATABASE' && active === 'Y' && Number.isFinite(id) && !usedIds.has(id);
     });
   });
+
+  readonly databaseComponentOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableDatabaseComponents().map((component) => ({
+      value: Number(component.componentId),
+      label: component.name?.trim() || String(component.componentId),
+      group: 'BASE DE DATOS',
+      searchText: component.acronym?.trim() || '',
+    })),
+  );
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();

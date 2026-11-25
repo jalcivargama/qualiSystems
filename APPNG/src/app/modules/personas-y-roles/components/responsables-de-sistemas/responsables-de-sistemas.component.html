@@ -131,19 +131,16 @@
         <div class="form-grid">
           <div class="form-field">
             <label for="field-componentId">Sistema <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-componentId"
               name="componentId"
+              [options]="systemComponentOptions()"
+              placeholder="Selecciona un sistema"
               [ngModel]="form.componentId"
               (ngModelChange)="onComponentIdChange($event)"
-              required
               [disabled]="isEditing()"
-            >
-              <option [ngValue]="null">Selecciona un sistema</option>
-              @for (component of systemComponents(); track component.componentId) {
-                <option [ngValue]="+component.componentId!">{{ component.name }}</option>
-              }
-            </select>
+              required
+            />
             @if (!isEditing()) {
               <small class="field-hint">Solo componentes tipo SISTEMA.</small>
             }
@@ -151,36 +148,30 @@
 
           <div class="form-field">
             <label for="field-personId">Persona <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-personId"
               name="personId"
+              [options]="peopleOptions()"
+              placeholder="Selecciona una persona"
               [ngModel]="form.personId"
               (ngModelChange)="onPersonIdChange($event)"
-              required
               [disabled]="isEditing()"
-            >
-              <option [ngValue]="null">Selecciona una persona</option>
-              @for (person of people(); track person.personId) {
-                <option [ngValue]="+person.personId!">{{ personOptionLabel(person) }}</option>
-              }
-            </select>
+              required
+            />
           </div>
 
           <div class="form-field">
             <label for="field-roleId">Rol <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-roleId"
               name="roleId"
+              [options]="roleOptions()"
+              placeholder="Selecciona un rol"
               [ngModel]="form.roleId"
               (ngModelChange)="onRoleIdChange($event)"
-              required
               [disabled]="isEditing() || form.componentId == null || form.personId == null"
-            >
-              <option [ngValue]="null">Selecciona un rol</option>
-              @for (role of availableRoles(); track role.roleId) {
-                <option [ngValue]="+role.roleId!">{{ roleOptionLabel(role) }}</option>
-              }
-            </select>
+              required
+            />
             @if (!isEditing()) {
               <small class="field-hint">Excluye roles ya asignados a esa persona en el sistema.</small>
             }

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../componentes/components.service';
 import { CatalogComponent } from '../componentes/models/component.model';
 import { SystemDetailsService } from './system-details.service';
@@ -29,7 +31,7 @@ type SystemForm = {
 
 @Component({
   selector: 'app-sistemas',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './sistemas.component.html',
   styleUrl: './sistemas.component.css',
 })
@@ -86,6 +88,15 @@ export class SistemasComponent implements OnInit {
       return type === 'SYSTEM' && active === 'Y' && Number.isFinite(id) && !usedIds.has(id);
     });
   });
+
+  readonly systemComponentOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableSystemComponents().map((component) => ({
+      value: Number(component.componentId),
+      label: component.name?.trim() || String(component.componentId),
+      group: 'SISTEMA',
+      searchText: component.acronym?.trim() || '',
+    })),
+  );
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();

@@ -3,6 +3,8 @@ import { Component, OnInit, computed, inject, input, output, signal } from '@ang
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ToastService } from '../../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
 import { PeopleService } from '../../../../personas-y-roles/components/personas/people.service';
 import { Person } from '../../../../personas-y-roles/components/personas/models/person.model';
 import { TechnologiesService } from '../../../../tecnologia/components/tecnologias/technologies.service';
@@ -27,7 +29,7 @@ type SystemBaseForm = {
 
 @Component({
   selector: 'app-nuevo-sistema-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchableSelectComponent],
   templateUrl: './nuevo-sistema-modal.component.html',
   styleUrl: './nuevo-sistema-modal.component.css',
 })
@@ -68,6 +70,14 @@ export class NuevoSistemaModalComponent implements OnInit {
       (person) =>
         person.personId != null && String(person.isActive ?? 'Y').toUpperCase() === 'Y',
     ),
+  );
+
+  readonly peopleOptions = computed<SearchableSelectOption[]>(() =>
+    this.availablePeople().map((person) => ({
+      value: Number(person.personId),
+      label: person.fullName?.trim() || String(person.personId),
+      searchText: person.email?.trim() || '',
+    })),
   );
 
   ngOnInit(): void {

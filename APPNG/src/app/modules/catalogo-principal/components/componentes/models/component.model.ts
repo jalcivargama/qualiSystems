@@ -15,6 +15,7 @@ export interface CatalogComponent {
   name: string;
   acronym?: string | null;
   description?: string | null;
+  resourceType?: string | null;
   isActive: ActiveFlag;
   createdAt?: string;
   updatedAt?: string;

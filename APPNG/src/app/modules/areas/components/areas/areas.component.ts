@@ -8,6 +8,8 @@ import {
   transformInputToUpperCase,
   transformPasteToUpperCase,
 } from '../../../../shared/functions/input.functions';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { PeopleService } from '../../../personas-y-roles/components/personas/people.service';
 import { Person } from '../../../personas-y-roles/components/personas/models/person.model';
 import { AreasService } from './areas.service';
@@ -24,7 +26,7 @@ type AreaForm = {
 
 @Component({
   selector: 'app-areas',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './areas.component.html',
   styleUrl: './areas.component.css',
 })
@@ -60,6 +62,16 @@ export class AreasComponent implements OnInit {
       ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query)),
     );
   });
+
+  readonly peopleOptions = computed<SearchableSelectOption[]>(() =>
+    this.people()
+      .filter((person) => person.personId != null)
+      .map((person) => ({
+        value: Number(person.personId),
+        label: person.fullName?.trim() || String(person.personId),
+        searchText: person.email?.trim() || '',
+      })),
+  );
 
   ngOnInit(): void {
     this.loadAreas();

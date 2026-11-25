@@ -66,17 +66,14 @@
 
           <div class="form-field full-width">
             <label for="ns-responsable">Responsable</label>
-            <select
+            <app-searchable-select
               id="ns-responsable"
               name="responsable"
+              [options]="peopleOptions()"
+              placeholder="Selecciona un responsable…"
               [ngModel]="responsiblePersonId()"
               (ngModelChange)="setResponsible($event)"
-            >
-              <option [ngValue]="null">Selecciona un responsable…</option>
-              @for (person of availablePeople(); track person.personId) {
-                <option [ngValue]="person.personId">{{ personLabel(person) }}</option>
-              }
-            </select>
+            />
           </div>
         </div>
 

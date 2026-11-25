@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
 import {
   CatalogComponent,
@@ -17,6 +19,7 @@ import {
   Dependency,
   DependencyRequest,
   DependencyScope,
+  FlowTipe,
 } from './models/dependency.model';
 
 type DependencyRow = Dependency & { _rowId: string };
@@ -26,13 +29,14 @@ type DependencyForm = {
   targetComponentId: number | null;
   dependencyTypeId: number | null;
   dependencyScope: DependencyScope | '';
+  flowTipe: FlowTipe | '';
   criticality: Criticality | '';
   description: string;
 };
 
 @Component({
   selector: 'app-dependencias',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './dependencias.component.html',
   styleUrl: './dependencias.component.css',
 })
@@ -45,6 +49,12 @@ export class DependenciasComponent implements OnInit {
   readonly scopeOptions: { value: DependencyScope; label: string }[] = [
     { value: 'INTERNAL', label: 'INTERNA' },
     { value: 'EXTERNAL', label: 'EXTERNA' },
+  ];
+
+  readonly flowTipeOptions: { value: FlowTipe; label: string }[] = [
+    { value: 'O', label: 'Saliente' },
+    { value: 'I', label: 'Entrante' },
+    { value: 'B', label: 'Bidireccional' },
   ];
 
   readonly criticalityOptions: { value: Criticality; label: string }[] = [
@@ -66,6 +76,10 @@ export class DependenciasComponent implements OnInit {
   private readonly scopeLabels = Object.fromEntries(
     this.scopeOptions.map((option) => [option.value, option.label]),
   ) as Record<DependencyScope, string>;
+
+  private readonly flowTipeLabels = Object.fromEntries(
+    this.flowTipeOptions.map((option) => [option.value, option.label]),
+  ) as Record<FlowTipe, string>;
 
   private readonly criticalityLabels = Object.fromEntries(
     this.criticalityOptions.map((option) => [option.value, option.label]),
@@ -96,6 +110,7 @@ export class DependenciasComponent implements OnInit {
         this.componentName(row.targetComponentId),
         this.dependencyTypeName(row.dependencyTypeId),
         this.labelForScope(row.dependencyScope),
+        this.labelForFlowTipe(row.flowTipe),
         this.labelForCriticality(row.criticality),
         row.description,
         row.createdAt,
@@ -110,6 +125,24 @@ export class DependenciasComponent implements OnInit {
     );
   });
 
+  readonly originComponentOptions = computed(() =>
+    this.toComponentOptions(this.components()),
+  );
+
+  readonly targetComponentOptions = computed(() =>
+    this.toComponentOptions(this.availableTargetComponents()),
+  );
+
+  readonly dependencyTypeOptions = computed<SearchableSelectOption[]>(() =>
+    this.dependencyTypes()
+      .filter((type) => type.dependencyTypeId != null)
+      .map((type) => ({
+        value: Number(type.dependencyTypeId),
+        label: type.typeName?.trim() || String(type.dependencyTypeId),
+        searchText: type.typeCode?.trim() || '',
+      })),
+  );
+
   ngOnInit(): void {
     this.loadDependencies();
     this.loadComponents();
@@ -122,6 +155,7 @@ export class DependenciasComponent implements OnInit {
       this.form.targetComponentId != null &&
       this.form.dependencyTypeId != null &&
       !!this.form.dependencyScope &&
+      !!this.form.flowTipe &&
       this.form.originComponentId !== this.form.targetComponentId
     );
   }
@@ -177,6 +211,11 @@ export class DependenciasComponent implements OnInit {
     return this.scopeLabels[value as DependencyScope] ?? value;
   }
 
+  labelForFlowTipe(value: string | null | undefined): string {
+    if (!value) return '—';
+    return this.flowTipeLabels[value as FlowTipe] ?? value;
+  }
+
   labelForCriticality(value: string | null | undefined): string {
     if (!value) return '—';
     return this.criticalityLabels[value as Criticality] ?? value;
@@ -206,6 +245,7 @@ export class DependenciasComponent implements OnInit {
       targetComponentId: this.toId(row.targetComponentId),
       dependencyTypeId: this.toId(row.dependencyTypeId),
       dependencyScope: row.dependencyScope ?? 'INTERNAL',
+      flowTipe: (row.flowTipe as FlowTipe | null) ?? '',
       criticality: (row.criticality as Criticality | null) ?? '',
       description: row.description ?? '',
     };
@@ -265,12 +305,14 @@ export class DependenciasComponent implements OnInit {
     const targetComponentId = this.toId(this.form.targetComponentId);
     const dependencyTypeId = this.toId(this.form.dependencyTypeId);
     const dependencyScope = this.form.dependencyScope;
+    const flowTipe = this.form.flowTipe;
 
     if (
       originComponentId == null ||
       targetComponentId == null ||
       dependencyTypeId == null ||
-      !dependencyScope
+      !dependencyScope ||
+      !flowTipe
     ) {
       this.formError.set('Completa los campos obligatorios.');
       return;
@@ -299,6 +341,7 @@ export class DependenciasComponent implements OnInit {
         targetComponentId,
         dependencyTypeId,
         dependencyScope,
+        flowTipe,
         criticality: this.form.criticality || null,
         description: description || null,
       };
@@ -322,6 +365,7 @@ export class DependenciasComponent implements OnInit {
       targetComponentId,
       dependencyTypeId,
       dependencyScope,
+      flowTipe,
     };
     if (this.form.criticality) createBody.criticality = this.form.criticality;
     if (description) createBody.description = description;
@@ -389,9 +433,24 @@ export class DependenciasComponent implements OnInit {
       targetComponentId: null,
       dependencyTypeId: null,
       dependencyScope: 'INTERNAL',
+      flowTipe: 'O',
       criticality: '',
       description: '',
     };
+  }
+
+  private toComponentOptions(components: CatalogComponent[]): SearchableSelectOption[] {
+    return components
+      .filter((component) => component.componentId != null)
+      .map((component) => {
+        const typeLabel = this.labelForComponentType(component.componentType);
+        return {
+          value: Number(component.componentId),
+          label: component.name?.trim() || String(component.componentId),
+          group: typeLabel,
+          searchText: `${component.acronym ?? ''} ${typeLabel}`,
+        };
+      });
   }
 
   private toId(value: number | string | null | undefined): number | null {

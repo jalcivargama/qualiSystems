@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { take } from 'rxjs';
@@ -11,6 +11,8 @@ import {
   DependencyTreeNode,
 } from '../../core/dependency-explorer.service';
 import { MockRecord } from '../../core/catalog-store.service';
+import { SearchableSelectComponent } from '../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../shared/ui/searchable-select/searchable-select.models';
 import { DependencyExplorerApiService } from './dependency-explorer-api.service';
 import { DependencyConnectionsDirective } from './dependency-connections.directive';
 import {
@@ -21,7 +23,13 @@ import {
 
 @Component({
   selector: 'app-explorador-dependencias',
-  imports: [CommonModule, FormsModule, RouterLink, DependencyConnectionsDirective],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    DependencyConnectionsDirective,
+    SearchableSelectComponent,
+  ],
   templateUrl: './explorador-dependencias.component.html',
   styleUrls: ['./explorador-dependencias.component.css', './dependency-connections.css'],
 })
@@ -31,7 +39,7 @@ export class ExploradorDependenciasComponent implements OnInit {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
 
-  components: MockRecord[] = [];
+  readonly components = signal<MockRecord[]>([]);
   selectedId = '';
   root: DependencyTreeNode | null = null;
   loadingComponents = false;
@@ -39,6 +47,20 @@ export class ExploradorDependenciasComponent implements OnInit {
   private readonly responseCache = new Map<string, DependencyExplorerResponse>();
   private readonly expandedDetails = new Set<string>();
   private initialComponentId = '';
+
+  readonly componentOptions = computed<SearchableSelectOption[]>(() =>
+    this.components().map((component) => {
+      const typeLabel = this.explorer.componentType(component);
+      const name = String(component['name'] ?? '');
+      const acronym = String(component['acronym'] ?? '');
+      return {
+        value: String(component['component_id'] ?? ''),
+        label: name,
+        group: typeLabel,
+        searchText: `${acronym} ${typeLabel}`,
+      };
+    }),
+  );
 
   constructor(readonly explorer: DependencyExplorerService) {}
 
@@ -51,6 +73,12 @@ export class ExploradorDependenciasComponent implements OnInit {
 
   String(value: unknown): string {
     return String(value ?? '');
+  }
+
+  onComponentSelected(value: string | number | null): void {
+    const id = value == null || value === '' ? '' : String(value);
+    this.selectedId = id;
+    this.selectComponent(id);
   }
 
   selectComponent(id: string): void {
@@ -159,20 +187,22 @@ export class ExploradorDependenciasComponent implements OnInit {
     this.loadingComponents = true;
     this.api.getComponents().subscribe({
       next: (components) => {
-        this.components = components.map((component) => ({
-          _mockId: `api-${component.componentId}`,
-          component_id: component.componentId,
-          component_type: component.componentType,
-          component_type_label: component.componentTypeLabel,
-          name: component.name,
-          acronym: component.acronym ?? '',
-          description: '',
-          is_active: component.isActive,
-        }));
+        this.components.set(
+          components.map((component) => ({
+            _mockId: `api-${component.componentId}`,
+            component_id: component.componentId,
+            component_type: component.componentType,
+            component_type_label: component.componentTypeLabel,
+            name: component.name,
+            acronym: component.acronym ?? '',
+            description: '',
+            is_active: component.isActive,
+          })),
+        );
         this.loadingComponents = false;
         if (
           this.initialComponentId &&
-          this.components.some(
+          this.components().some(
             (component) =>
               String(component['component_id']) === this.initialComponentId,
           )
@@ -185,7 +215,7 @@ export class ExploradorDependenciasComponent implements OnInit {
         this.changeDetector.markForCheck();
       },
       error: (error: HttpErrorResponse) => {
-        this.components = [];
+        this.components.set([]);
         this.loadingComponents = false;
         this.toastService.error(
           'No se pudieron cargar los componentes',
