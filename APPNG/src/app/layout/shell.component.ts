@@ -41,6 +41,7 @@ export class ShellComponent {
         { label: 'Tipos de dependencia', route: '/catalogos/dependency_type' },
         { label: 'Personas', route: '/catalogos/person' },
         { label: 'Roles de responsabilidad', route: '/catalogos/responsibility_role' },
+        { label: 'Áreas', route: '/catalogos/area' },
       ],
     },
     {
