@@ -34,6 +34,12 @@
 
     <label class="filter-field">
       <span>Tecnología</span>
+      <input
+        name="technologyFilter"
+        [(ngModel)]="technologyFilter"
+        placeholder="Buscar tecnología…"
+        [disabled]="loadingOptions"
+      />
       <select
         multiple
         name="technologyIds"
@@ -41,7 +47,7 @@
         [disabled]="loadingOptions"
         size="6"
       >
-        @for (technology of technologies; track technology.technologyId) {
+        @for (technology of filteredTechnologies; track technology.technologyId) {
           <option [value]="technology.technologyId!">{{ technology.name }}</option>
         }
       </select>
@@ -50,6 +56,12 @@
 
     <label class="filter-field">
       <span>Responsable</span>
+      <input
+        name="peopleFilter"
+        [(ngModel)]="peopleFilter"
+        placeholder="Buscar responsable…"
+        [disabled]="loadingOptions"
+      />
       <select
         multiple
         name="personIds"
@@ -57,7 +69,7 @@
         [disabled]="loadingOptions"
         size="6"
       >
-        @for (person of people; track person.personId) {
+        @for (person of filteredPeople; track person.personId) {
           <option [value]="person.personId!">{{ person.fullName }}</option>
         }
       </select>

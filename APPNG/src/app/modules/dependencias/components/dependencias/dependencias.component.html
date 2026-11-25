@@ -134,51 +134,42 @@
         <div class="form-grid">
           <div class="form-field">
             <label for="field-originComponentId">Componente origen <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-originComponentId"
               name="originComponentId"
+              [options]="originComponentOptions()"
+              placeholder="Selecciona un componente"
               [ngModel]="form.originComponentId"
               (ngModelChange)="onOriginComponentIdChange($event)"
               required
-            >
-              <option [ngValue]="null">Selecciona un componente</option>
-              @for (component of components(); track component.componentId) {
-                <option [ngValue]="+component.componentId!">{{ componentOptionLabel(component) }}</option>
-              }
-            </select>
+            />
           </div>
 
           <div class="form-field">
             <label for="field-targetComponentId">Componente destino <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-targetComponentId"
               name="targetComponentId"
+              [options]="targetComponentOptions()"
+              placeholder="Selecciona un componente"
               [ngModel]="form.targetComponentId"
               (ngModelChange)="onTargetComponentIdChange($event)"
               required
-            >
-              <option [ngValue]="null">Selecciona un componente</option>
-              @for (component of availableTargetComponents(); track component.componentId) {
-                <option [ngValue]="+component.componentId!">{{ componentOptionLabel(component) }}</option>
-              }
-            </select>
+            />
             <small class="field-hint">Debe ser distinto del componente origen.</small>
           </div>
 
           <div class="form-field">
             <label for="field-dependencyTypeId">Tipo de dependencia <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-dependencyTypeId"
               name="dependencyTypeId"
+              [options]="dependencyTypeOptions()"
+              placeholder="Selecciona un tipo"
               [ngModel]="form.dependencyTypeId"
               (ngModelChange)="onDependencyTypeIdChange($event)"
               required
-            >
-              <option [ngValue]="null">Selecciona un tipo</option>
-              @for (type of dependencyTypes(); track type.dependencyTypeId) {
-                <option [ngValue]="+type.dependencyTypeId!">{{ type.typeName }}</option>
-              }
-            </select>
+            />
           </div>
 
           <div class="form-field">

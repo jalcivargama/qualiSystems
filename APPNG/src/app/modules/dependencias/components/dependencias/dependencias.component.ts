@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
 import {
   CatalogComponent,
@@ -34,7 +36,7 @@ type DependencyForm = {
 
 @Component({
   selector: 'app-dependencias',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './dependencias.component.html',
   styleUrl: './dependencias.component.css',
 })
@@ -122,6 +124,24 @@ export class DependenciasComponent implements OnInit {
       (component) => Number(component.componentId) !== Number(originId),
     );
   });
+
+  readonly originComponentOptions = computed(() =>
+    this.toComponentOptions(this.components()),
+  );
+
+  readonly targetComponentOptions = computed(() =>
+    this.toComponentOptions(this.availableTargetComponents()),
+  );
+
+  readonly dependencyTypeOptions = computed<SearchableSelectOption[]>(() =>
+    this.dependencyTypes()
+      .filter((type) => type.dependencyTypeId != null)
+      .map((type) => ({
+        value: Number(type.dependencyTypeId),
+        label: type.typeName?.trim() || String(type.dependencyTypeId),
+        searchText: type.typeCode?.trim() || '',
+      })),
+  );
 
   ngOnInit(): void {
     this.loadDependencies();
@@ -417,6 +437,20 @@ export class DependenciasComponent implements OnInit {
       criticality: '',
       description: '',
     };
+  }
+
+  private toComponentOptions(components: CatalogComponent[]): SearchableSelectOption[] {
+    return components
+      .filter((component) => component.componentId != null)
+      .map((component) => {
+        const typeLabel = this.labelForComponentType(component.componentType);
+        return {
+          value: Number(component.componentId),
+          label: component.name?.trim() || String(component.componentId),
+          group: typeLabel,
+          searchText: `${component.acronym ?? ''} ${typeLabel}`,
+        };
+      });
   }
 
   private toId(value: number | string | null | undefined): number | null {

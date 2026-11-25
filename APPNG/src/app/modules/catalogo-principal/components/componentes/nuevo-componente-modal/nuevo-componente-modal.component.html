@@ -115,32 +115,26 @@
                   @if (draft.kind === 'SYSTEM') {
                     <div class="form-field">
                       <label [attr.for]="'nc-responsable-' + draft.id">Responsable</label>
-                      <select
+                      <app-searchable-select
                         [id]="'nc-responsable-' + draft.id"
                         [name]="'responsable-' + draft.id"
+                        [options]="peopleOptions()"
+                        placeholder="Selecciona un responsable…"
                         [ngModel]="draft.responsiblePersonId"
                         (ngModelChange)="setResponsible(draft.id, $event)"
-                      >
-                        <option [ngValue]="null">Selecciona un responsable…</option>
-                        @for (person of availablePeople(); track person.personId) {
-                          <option [ngValue]="person.personId">{{ personLabel(person) }}</option>
-                        }
-                      </select>
+                      />
                     </div>
 
                     <div class="form-field">
                       <label [attr.for]="'nc-responsibility-role-' + draft.id">Rol</label>
-                      <select
+                      <app-searchable-select
                         [id]="'nc-responsibility-role-' + draft.id"
                         [name]="'responsibleRoleId-' + draft.id"
+                        [options]="roleOptions()"
+                        placeholder="Selecciona un rol…"
                         [ngModel]="draft.responsibleRoleId"
                         (ngModelChange)="setResponsibleRole(draft.id, $event)"
-                      >
-                        <option [ngValue]="null">Selecciona un rol…</option>
-                        @for (role of availableRoles(); track role.roleId) {
-                          <option [ngValue]="role.roleId">{{ roleLabel(role) }}</option>
-                        }
-                      </select>
+                      />
                     </div>
                   }
                 </div>

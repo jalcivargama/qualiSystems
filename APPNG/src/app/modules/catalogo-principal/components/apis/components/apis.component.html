@@ -130,21 +130,16 @@
         <div class="form-grid">
           <div class="form-field full-width">
             <label for="field-componentId">Componente API <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-componentId"
               name="componentId"
+              [options]="apiComponentOptions()"
+              placeholder="Selecciona un componente"
               [ngModel]="form.componentId"
               (ngModelChange)="onComponentIdChange($event)"
+              [disabled]="isEditing()"
               required
-            >
-              <option [ngValue]="null">Selecciona un componente</option>
-              <option
-                *ngFor="let component of availableApiComponents()"
-                [ngValue]="+component.componentId!"
-              >
-                {{ component.name }}
-              </option>
-            </select>
+            />
             <small class="field-hint">Solo componentes tipo API activos y sin detalle asociado.</small>
             @if (availableApiComponents().length === 0) {
               <small class="field-hint">No hay componentes API activos disponibles para asociar.</small>

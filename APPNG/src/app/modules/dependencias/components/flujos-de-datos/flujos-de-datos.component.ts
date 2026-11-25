@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../../catalogo-principal/components/componentes/components.service';
 import { CatalogComponent } from '../../../catalogo-principal/components/componentes/models/component.model';
 import { DependenciesService } from '../dependencias/dependencies.service';
@@ -24,7 +26,7 @@ type DataFlowForm = {
 
 @Component({
   selector: 'app-flujos-de-datos',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './flujos-de-datos.component.html',
   styleUrl: './flujos-de-datos.component.css',
 })
@@ -74,6 +76,16 @@ export class FlujosDeDatosComponent implements OnInit {
       ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query)),
     );
   });
+
+  readonly dependencyOptions = computed<SearchableSelectOption[]>(() =>
+    this.dependencies()
+      .filter((dependency) => dependency.dependencyId != null)
+      .map((dependency) => ({
+        value: Number(dependency.dependencyId),
+        label: this.dependencyLabel(dependency.dependencyId),
+        searchText: `${this.componentName(dependency.originComponentId)} ${this.componentName(dependency.targetComponentId)}`,
+      })),
+  );
 
   ngOnInit(): void {
     this.loadDataFlows();

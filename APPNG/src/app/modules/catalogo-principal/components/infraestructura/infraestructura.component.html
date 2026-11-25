@@ -125,21 +125,16 @@
         <div class="form-grid">
           <div class="form-field full-width">
             <label for="field-componentId">Componente INFRAESTRUCTURA <i>*</i></label>
-            <select
+            <app-searchable-select
               id="field-componentId"
               name="componentId"
+              [options]="infrastructureComponentOptions()"
+              placeholder="Selecciona un componente"
               [ngModel]="form.componentId"
               (ngModelChange)="onComponentIdChange($event)"
+              [disabled]="isEditing()"
               required
-            >
-              <option [ngValue]="null">Selecciona un componente</option>
-              <option
-                *ngFor="let component of availableInfrastructureComponents()"
-                [ngValue]="+component.componentId!"
-              >
-                {{ component.name }}
-              </option>
-            </select>
+            />
             <small class="field-hint">Solo componentes tipo INFRAESTRUCTURA activos y sin detalle asociado.</small>
             @if (availableInfrastructureComponents().length === 0) {
               <small class="field-hint">No hay componentes INFRAESTRUCTURA activos disponibles para asociar.</small>

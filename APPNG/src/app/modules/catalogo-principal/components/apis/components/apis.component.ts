@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../../core/toast.service';
+import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../componentes/components.service';
 import { CatalogComponent } from '../../componentes/models/component.model';
 import { ApisService } from '../apis.service';
@@ -27,7 +29,7 @@ type ApiForm = {
 
 @Component({
   selector: 'app-apis',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, SearchableSelectComponent],
   templateUrl: './apis.component.html',
   styleUrl: './apis.component.css',
 })
@@ -64,6 +66,15 @@ export class ApisComponent implements OnInit {
       return type === 'API' && active === 'Y' && Number.isFinite(id) && !usedIds.has(id);
     });
   });
+
+  readonly apiComponentOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableApiComponents().map((component) => ({
+      value: Number(component.componentId),
+      label: component.name?.trim() || String(component.componentId),
+      group: 'API',
+      searchText: component.acronym?.trim() || '',
+    })),
+  );
 
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();

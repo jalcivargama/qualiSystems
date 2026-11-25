@@ -26,6 +26,8 @@ import {
   transformPasteToLowerCase,
 } from '../../../../../shared/functions/input.functions';
 import { TIPOS_RECURSOS_OPTIONS } from '../../../../../shared/enum/tipos.recuros.enum';
+import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
+import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
 import {
   CRITICALITY_OPTIONS,
   DEPLOYMENT_ENVIRONMENTS,
@@ -43,7 +45,7 @@ import {
 
 @Component({
   selector: 'app-nuevo-componente-modal',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SearchableSelectComponent],
   templateUrl: './nuevo-componente-modal.component.html',
   styleUrl: './nuevo-componente-modal.component.css',
 })
@@ -100,6 +102,22 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   readonly availableRoles = computed(() =>
     this.roles().filter((role) => role.roleId != null),
+  );
+
+  readonly peopleOptions = computed<SearchableSelectOption[]>(() =>
+    this.availablePeople().map((person) => ({
+      value: Number(person.personId),
+      label: person.fullName?.trim() || String(person.personId),
+      searchText: person.email?.trim() || '',
+    })),
+  );
+
+  readonly roleOptions = computed<SearchableSelectOption[]>(() =>
+    this.availableRoles().map((role) => ({
+      value: Number(role.roleId),
+      label: role.roleName?.trim() || String(role.roleId),
+      searchText: role.roleCode?.trim() || '',
+    })),
   );
 
   readonly availableKindOptions = computed(() => {
