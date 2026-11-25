@@ -85,6 +85,21 @@
                     />
                   </div>
 
+                  <div class="form-field">
+                    <label [attr.for]="'nc-resourceType-' + draft.id">Tipo de recurso</label>
+                    <select
+                      [id]="'nc-resourceType-' + draft.id"
+                      [name]="'resourceType-' + draft.id"
+                      [ngModel]="draft.resourceType"
+                      (ngModelChange)="patchCommonField(draft.id, 'resourceType', $event)"
+                    >
+                      <option value="">Selecciona tipo…</option>
+                      @for (option of resourceTypeOptions; track option.value) {
+                        <option [value]="option.value">{{ option.label }}</option>
+                      }
+                    </select>
+                  </div>
+
                   <div class="form-field full-width">
                     <label [attr.for]="'nc-description-' + draft.id">Descripción</label>
                     <textarea

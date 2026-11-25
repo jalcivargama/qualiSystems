@@ -25,6 +25,7 @@ import {
   transformInputToLowerCase,
   transformPasteToLowerCase,
 } from '../../../../../shared/functions/input.functions';
+import { TIPOS_RECURSOS_OPTIONS } from '../../../../../shared/enum/tipos.recuros.enum';
 import {
   CRITICALITY_OPTIONS,
   DEPLOYMENT_ENVIRONMENTS,
@@ -83,6 +84,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly criticalityOptions = CRITICALITY_OPTIONS;
   readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
   readonly deploymentEnvironments = DEPLOYMENT_ENVIRONMENTS;
+  readonly resourceTypeOptions = TIPOS_RECURSOS_OPTIONS;
   readonly maxComponents = MAX_NUEVO_COMPONENTES;
   readonly transformToLowerCase = transformInputToLowerCase;
   readonly transformPasteToLower = transformPasteToLowerCase;
@@ -162,7 +164,7 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   patchCommonField(
     draftId: string,
-    field: 'name' | 'acronym' | 'description' | 'isActive',
+    field: 'name' | 'acronym' | 'resourceType' | 'description' | 'isActive',
     value: string,
   ): void {
     this.drafts.update((list) =>
@@ -423,6 +425,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       ...structuredClone(rest),
       name: draft.name.trim(),
       acronym: draft.acronym.trim(),
+      resourceType: draft.resourceType.trim(),
       description: draft.description.trim(),
       responsiblePersonId: draft.kind === 'SYSTEM' ? draft.responsiblePersonId : null,
       responsibleRoleId: draft.kind === 'SYSTEM' ? draft.responsibleRoleId : null,
@@ -448,6 +451,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       isActive: payload.isActive,
     };
     if (payload.acronym) componentBody.acronym = payload.acronym;
+    if (payload.resourceType) componentBody.resourceType = payload.resourceType;
     if (payload.description) componentBody.description = payload.description;
 
     return this.componentsService.createNewComponent(componentBody).pipe(
@@ -641,6 +645,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       isActive: 'Y',
       name: '',
       acronym: '',
+      resourceType: '',
       description: '',
       responsiblePersonId: null,
       responsibleRoleId: null,

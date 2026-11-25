@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../../core/toast.service';
+import { TIPOS_RECURSOS_OPTIONS } from '../../../../../shared/enum/tipos.recuros.enum';
 import { ComponentsService } from '../components.service';
 import {
   ActiveFlag,
@@ -22,6 +23,7 @@ type CreateForm = {
   componentType: ComponentType;
   name: string;
   acronym: string;
+  resourceType: string;
   description: string;
   isActive: ActiveFlag;
 };
@@ -55,6 +57,8 @@ export class ComponentesComponent implements OnInit {
     { value: 'Y', label: 'SÍ' },
     { value: 'N', label: 'NO' },
   ];
+
+  readonly resourceTypeOptions = TIPOS_RECURSOS_OPTIONS;
 
   private readonly componentTypeLabels = Object.fromEntries(
     this.componentTypeOptions.map((option) => [option.value, option.label]),
@@ -156,6 +160,7 @@ export class ComponentesComponent implements OnInit {
       componentType: row.componentType,
       name: row.name ?? '',
       acronym: row.acronym ?? '',
+      resourceType: row.resourceType ?? '',
       description: row.description ?? '',
       isActive: (row.isActive === 'N' ? 'N' : 'Y') as ActiveFlag,
     };
@@ -226,6 +231,7 @@ export class ComponentesComponent implements OnInit {
       return;
     }
 
+    const resourceType = this.form.resourceType.trim();
     const description = this.form.description.trim();
     this.saving.set(true);
     this.formError.set('');
@@ -242,6 +248,7 @@ export class ComponentesComponent implements OnInit {
         componentType: this.form.componentType,
         name,
         acronym: acronym || null,
+        resourceType: resourceType || null,
         description: description || null,
         isActive: this.form.isActive,
       };
@@ -266,6 +273,7 @@ export class ComponentesComponent implements OnInit {
       isActive: this.form.isActive,
     };
     if (acronym) body.acronym = acronym;
+    if (resourceType) body.resourceType = resourceType;
     if (description) body.description = description;
 
     this.componentsService.createNewComponent(body).subscribe({
@@ -308,6 +316,7 @@ export class ComponentesComponent implements OnInit {
       componentType: 'SYSTEM',
       name: '',
       acronym: '',
+      resourceType: '',
       description: '',
       isActive: 'Y',
     };

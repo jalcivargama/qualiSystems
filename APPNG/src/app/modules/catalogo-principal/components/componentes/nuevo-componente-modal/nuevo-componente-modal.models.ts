@@ -54,6 +54,7 @@ export type NuevoComponenteForm = {
   isActive: ActiveFlag;
   name: string;
   acronym: string;
+  resourceType: string;
   description: string;
   responsiblePersonId: number | null;
   responsibleRoleId: number | null;
