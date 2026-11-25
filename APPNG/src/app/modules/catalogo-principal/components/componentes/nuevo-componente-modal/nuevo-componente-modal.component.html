@@ -274,6 +274,19 @@
                       </div>
 
                       <div class="form-field">
+                        <label [attr.for]="'nc-api-certificateValidity-' + draft.id">
+                          Validez del certificado
+                        </label>
+                        <input
+                          [id]="'nc-api-certificateValidity-' + draft.id"
+                          [name]="'apiCertificateValidity-' + draft.id"
+                          type="date"
+                          [ngModel]="draft.api.certificateValidity"
+                          (ngModelChange)="patchApiField(draft.id, 'certificateValidity', $event)"
+                        />
+                      </div>
+
+                      <div class="form-field">
                         <label [attr.for]="'nc-api-auth-' + draft.id">Autenticación</label>
                         <input
                           [id]="'nc-api-auth-' + draft.id"

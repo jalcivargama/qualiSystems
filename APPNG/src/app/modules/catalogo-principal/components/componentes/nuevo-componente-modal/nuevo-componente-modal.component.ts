@@ -224,7 +224,14 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   patchApiField(
     draftId: string,
-    field: 'apiVersion' | 'url' | 'urlDoc' | 'protocol' | 'authenticationMethod' | 'slaDescription',
+    field:
+      | 'apiVersion'
+      | 'url'
+      | 'urlDoc'
+      | 'certificateValidity'
+      | 'protocol'
+      | 'authenticationMethod'
+      | 'slaDescription',
     value: string,
   ): void {
     this.drafts.update((list) =>
@@ -411,6 +418,10 @@ export class NuevoComponenteModalComponent implements OnInit {
       if (draft.api.urlDoc.trim().length > 2000) {
         return 'La URL Documentación del API no puede superar 2000 caracteres.';
       }
+      const certificateValidity = draft.api.certificateValidity.trim();
+      if (certificateValidity && !/^\d{4}-\d{2}-\d{2}$/.test(certificateValidity)) {
+        return 'La validez del certificado debe tener formato YYYY-MM-DD.';
+      }
       if (draft.api.protocol.trim().length > 30) {
         return 'El protocolo no puede superar 30 caracteres.';
       }
@@ -547,6 +558,7 @@ export class NuevoComponenteModalComponent implements OnInit {
     const apiVersion = payload.api.apiVersion.trim();
     const url = payload.api.url.trim();
     const urlDoc = payload.api.urlDoc.trim();
+    const certificateValidity = payload.api.certificateValidity.trim();
     const protocol = payload.api.protocol.trim();
     const authenticationMethod = payload.api.authenticationMethod.trim();
     const slaDescription = payload.api.slaDescription.trim();
@@ -555,6 +567,7 @@ export class NuevoComponenteModalComponent implements OnInit {
     if (apiVersion) apiBody.apiVersion = apiVersion;
     if (url) apiBody.url = url;
     if (urlDoc) apiBody.urlDoc = urlDoc;
+    if (certificateValidity) apiBody.certificateValidity = certificateValidity;
     if (protocol) apiBody.protocol = protocol;
     if (authenticationMethod) apiBody.authenticationMethod = authenticationMethod;
     if (slaDescription) apiBody.slaDescription = slaDescription;
@@ -689,6 +702,7 @@ export class NuevoComponenteModalComponent implements OnInit {
         apiVersion: '',
         url: '',
         urlDoc: '',
+        certificateValidity: '',
         protocol: '',
         authenticationMethod: '',
         slaDescription: '',

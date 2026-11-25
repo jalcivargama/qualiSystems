@@ -29,6 +29,7 @@ export type ApiDetails = {
   apiVersion: string;
   url: string;
   urlDoc: string;
+  certificateValidity: string;
   protocol: string;
   authenticationMethod: string;
   slaDescription: string;

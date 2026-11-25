@@ -196,6 +196,16 @@
           </div>
 
           <div class="form-field">
+            <label for="field-certificateValidity">Validez del certificado</label>
+            <input
+              id="field-certificateValidity"
+              name="certificateValidity"
+              type="date"
+              [(ngModel)]="form.certificateValidity"
+            />
+          </div>
+
+          <div class="form-field">
             <label for="field-authenticationMethod">Autenticación</label>
             <input
               id="field-authenticationMethod"

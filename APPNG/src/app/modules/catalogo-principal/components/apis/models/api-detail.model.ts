@@ -5,6 +5,8 @@ export interface ApiDetail {
   apiVersion?: string | null;
   url?: string | null;
   urlDoc?: string | null;
+  /** Fecha opcional YYYY-MM-DD */
+  certificateValidity?: string | null;
   protocol?: string | null;
   authenticationMethod?: string | null;
   slaDescription?: string | null;
