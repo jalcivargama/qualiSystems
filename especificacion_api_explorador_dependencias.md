@@ -127,6 +127,8 @@ Al seleccionar o volver a expandir una tarjeta, el frontend solicita este endpoi
 
 El backend no debe recursar indefinidamente. Cada `targetComponent` contiene los datos de una tarjeta, pero no contiene sus `outgoingDependencies`.
 
+Si `resourceType` no está presente o es `null`, no se muestra ningún icono. Si `flowTipe` no está presente o es `null`, la conexión se muestra sin marcadores de dirección.
+
 ### 4.2 Respuesta basada en el mock
 
 ```json
@@ -135,6 +137,7 @@ El backend no debe recursar indefinidamente. Cada `targetComponent` contiene los
     "componentId": 1,
     "componentType": "SYSTEM",
     "componentTypeLabel": "Sistema",
+    "resourceType": "I",
     "name": "Portal de clientes",
     "acronym": "PORTAL",
     "description": "Canal digital de clientes",
@@ -178,6 +181,7 @@ El backend no debe recursar indefinidamente. Cada `targetComponent` contiene los
   "outgoingDependencies": [
     {
       "dependencyId": 1,
+      "flowTipe": "O",
       "dependencyType": {
         "dependencyTypeId": 1,
         "typeCode": "REST_API",
@@ -191,6 +195,7 @@ El backend no debe recursar indefinidamente. Cada `targetComponent` contiene los
         "componentId": 2,
         "componentType": "API",
         "componentTypeLabel": "API",
+        "resourceType": "E",
         "name": "API Clientes",
         "acronym": "API-C",
         "description": "Servicios de clientes",
@@ -221,6 +226,7 @@ El backend no debe recursar indefinidamente. Cada `targetComponent` contiene los
 | `componentId` | `number` | No | `catalog_component.component_id` |
 | `componentType` | `ComponentType` | No | `catalog_component.component_type` |
 | `componentTypeLabel` | `string` | No | Etiqueta calculada según `componentType`. |
+| `resourceType` | `"I" \| "E"` | Sí | `I`: recurso interno; `E`: proveedor. Aplica también a cada `targetComponent`. |
 | `name` | `string` | No | `catalog_component.name` |
 | `acronym` | `string` | Sí | `catalog_component.acronym` |
 | `description` | `string` | Sí | `catalog_component.description` |
@@ -360,6 +366,7 @@ La vista construye la etiqueta `PRODUCTION · https://portal.demo.local` y puede
 ```json
 {
   "dependencyId": 1,
+  "flowTipe": "O",
   "dependencyType": {
     "dependencyTypeId": 1,
     "typeCode": "REST_API",
@@ -373,6 +380,7 @@ La vista construye la etiqueta `PRODUCTION · https://portal.demo.local` y puede
     "componentId": 2,
     "componentType": "API",
     "componentTypeLabel": "API",
+    "resourceType": "E",
     "name": "API Clientes",
     "acronym": "API-C",
     "description": "Servicios de clientes",
@@ -392,6 +400,7 @@ Mapeo:
 | JSON | Oracle |
 |---|---|
 | `dependencyId` | `dependency.dependency_id` |
+| `flowTipe` | Dirección visual del flujo: `I` apunta al origen; `O` y `B` apuntan al destino. Puede ser `null`. |
 | `dependencyType` | Join con `dependency_type` |
 | `dependencyScope` | `dependency.dependency_scope` |
 | `criticality` | `dependency.criticality` |
@@ -530,6 +539,7 @@ public record ComponentCard(
     Long componentId,
     String componentType,
     String componentTypeLabel,
+    String resourceType,
     String name,
     String acronym,
     String description,
@@ -542,6 +552,7 @@ public record ComponentCard(
 
 public record OutgoingDependencyCard(
     Long dependencyId,
+    String flowTipe,
     DependencyTypeSummary dependencyType,
     String dependencyScope,
     String criticality,

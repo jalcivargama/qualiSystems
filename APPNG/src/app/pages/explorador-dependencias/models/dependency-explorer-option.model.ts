@@ -80,6 +80,7 @@ export interface DependencyExplorerDeployment {
 }
 
 export interface DependencyExplorerComponent extends DependencyExplorerOption {
+  resourceType?: 'I' | 'E' | null;
   description: string | null;
   subtype: DependencyExplorerSubtype | null;
   responsibilities: DependencyExplorerResponsibility[];
@@ -95,6 +96,7 @@ export interface DependencyExplorerType {
 
 export interface DependencyExplorerOutgoingDependency {
   dependencyId: number;
+  flowTipe?: 'I' | 'O' | 'B' | null;
   dependencyType: DependencyExplorerType;
   dependencyScope: 'INTERNAL' | 'EXTERNAL';
   criticality: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' | null;

@@ -12,6 +12,7 @@ import {
 } from '../../core/dependency-explorer.service';
 import { MockRecord } from '../../core/catalog-store.service';
 import { DependencyExplorerApiService } from './dependency-explorer-api.service';
+import { DependencyConnectionsDirective } from './dependency-connections.directive';
 import {
   DependencyExplorerComponent,
   DependencyExplorerResponse,
@@ -20,9 +21,9 @@ import {
 
 @Component({
   selector: 'app-explorador-dependencias',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, DependencyConnectionsDirective],
   templateUrl: './explorador-dependencias.component.html',
-  styleUrl: './explorador-dependencias.component.css',
+  styleUrls: ['./explorador-dependencias.component.css', './dependency-connections.css'],
 })
 export class ExploradorDependenciasComponent implements OnInit {
   private readonly api = inject(DependencyExplorerApiService);
@@ -229,6 +230,7 @@ export class ExploradorDependenciasComponent implements OnInit {
         dependency: {
           _mockId: `api-dependency-${dependency.dependencyId}`,
           dependency_id: dependency.dependencyId,
+          flow_tipe: dependency.flowTipe ?? null,
           origin_component_id: Number(currentId),
           target_component_id: target.componentId,
           dependency_type_id: dependency.dependencyType.dependencyTypeId,
@@ -254,6 +256,7 @@ export class ExploradorDependenciasComponent implements OnInit {
       component_id: component.componentId,
       component_type: component.componentType,
       component_type_label: component.componentTypeLabel,
+      resource_type: component.resourceType ?? null,
       name: component.name,
       acronym: component.acronym ?? '',
       description: component.description,

@@ -52,8 +52,13 @@
 </section>
 
 <ng-template #nodeTemplate let-node>
-  <li class="tree-node" [class.cycle-node]="node.cycle">
+  <li class="tree-node" [class.cycle-node]="node.cycle" [attr.data-flow-tipe]="node.dependency?.['flow_tipe']">
     <article class="component-card">
+      @if (node.component['resource_type'] === 'I') {
+        <img class="resource-icon" src="assets/internal.jpg" alt="Recurso interno" title="Recurso interno">
+      } @else if (node.component['resource_type'] === 'E') {
+        <img class="resource-icon" src="assets/external.png" alt="Proveedor" title="Proveedor">
+      }
       @if (node.dependency) {
         <div class="edge-label">
           <span>{{ explorer.dependencyType(node.dependency) }}</span>
@@ -156,7 +161,8 @@
     </article>
 
     @if (node.expanded && node.children?.length) {
-      <ul class="tree-children">
+      <ul class="tree-children" appDependencyConnections>
+        <svg class="dependency-connections" aria-hidden="true"></svg>
         @for (child of node.children; track child.path) {
           <ng-container
             [ngTemplateOutlet]="nodeTemplate"
