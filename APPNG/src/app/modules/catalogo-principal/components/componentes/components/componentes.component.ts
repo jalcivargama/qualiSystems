@@ -144,7 +144,7 @@ export class ComponentesComponent implements OnInit {
     this.nuevoComponenteModalOpen.set(false);
   }
 
-  onNuevoComponenteSaved(_payload: NuevoComponenteForm): void {
+  onNuevoComponenteSaved(_payload: NuevoComponenteForm[]): void {
     this.nuevoComponenteModalOpen.set(false);
     this.loadComponents();
   }

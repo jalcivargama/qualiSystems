@@ -3,7 +3,8 @@ import { Environment } from '../../../../operacion/components/despliegues/models
 
 export type ActiveFlag = 'Y' | 'N';
 
-export type NuevoComponenteKind = 'SYSTEM' | 'FRONTEND' | 'API' | 'DATABASE';
+/** Tipos soportados en el alta (máx. 1 de cada uno). */
+export type NuevoComponenteKind = 'SYSTEM' | 'API' | 'DATABASE';
 
 export type EnvironmentCode = 'DEV' | 'QA' | 'PROD';
 
@@ -64,6 +65,11 @@ export type NuevoComponenteForm = {
   database: DatabaseDetails;
 };
 
+/** Borrador editable dentro del modal (incluye id local). */
+export type NuevoComponenteDraft = NuevoComponenteForm & {
+  id: string;
+};
+
 export const ENVIRONMENT_CODES: EnvironmentCode[] = ['DEV', 'QA', 'PROD'];
 
 export const DEPLOYMENT_ENVIRONMENTS: {
@@ -104,3 +110,5 @@ export const NUEVO_COMPONENTE_KIND_OPTIONS: { value: NuevoComponenteKind; label:
   { value: 'API', label: 'API' },
   { value: 'DATABASE', label: 'Base de Datos' },
 ];
+
+export const MAX_NUEVO_COMPONENTES = NUEVO_COMPONENTE_KIND_OPTIONS.length;

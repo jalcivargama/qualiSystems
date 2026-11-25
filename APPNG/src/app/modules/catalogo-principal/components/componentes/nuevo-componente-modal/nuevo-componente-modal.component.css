@@ -126,16 +126,160 @@
   border-top: 1px solid #eee9f0;
 }
 
+.section-block.first-section {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .section-title {
   font-size: 13px;
   font-weight: 700;
   color: #2d2a32;
 }
 
+.section-title.nested {
+  font-size: 11px;
+  margin-bottom: 0;
+}
+
 .section-sub {
   margin: 4px 0 14px;
   font-size: 10px;
   color: #6b6570;
+}
+
+.add-component-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.ghost-button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: #f7eef5;
+  color: #6b215c;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ghost-button:hover:not(:disabled) {
+  background: #f0e4ed;
+}
+
+.ghost-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.type-picker {
+  display: grid;
+  gap: 6px;
+  max-width: 280px;
+  width: 100%;
+}
+
+.type-picker label {
+  font-size: 9px;
+  font-weight: 650;
+  color: #4a4450;
+}
+
+.type-picker select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 36px;
+  border: 1px solid #d9d4dc;
+  border-radius: 5px;
+  background: #fff;
+  padding: 8px 9px;
+  color: #2d2a32;
+  font: inherit;
+  font-size: 10px;
+  outline: 0;
+}
+
+.type-picker select:focus {
+  border-color: #6b215c;
+  box-shadow: 0 0 0 2px rgba(107, 33, 92, 0.14);
+}
+
+.component-card {
+  border: 1px solid #ebe6ef;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: #fff;
+}
+
+.component-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8f6f9;
+  border-bottom: 1px solid #ebe6ef;
+}
+
+.component-card-header strong {
+  font-size: 11px;
+  color: #2d2a32;
+}
+
+.component-card-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.danger-ghost {
+  border: 0;
+  background: transparent;
+  color: #6b6570;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.danger-ghost:hover:not(:disabled) {
+  color: #c0392b;
+  background: #fdf2f2;
+}
+
+.danger-ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.empty-components {
+  margin: 0 0 12px;
+  font-size: 10px;
+  color: #6b6570;
+}
+
+.tech-field {
+  margin: 0;
 }
 
 .env-grid {
