@@ -28,6 +28,7 @@ export type FrontendDetails = {
 export type ApiDetails = {
   apiVersion: string;
   url: string;
+  urlDoc: string;
   protocol: string;
   authenticationMethod: string;
   slaDescription: string;

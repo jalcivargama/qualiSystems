@@ -254,7 +254,7 @@
                       </div>
 
                       <div class="form-field full-width">
-                        <label [attr.for]="'nc-api-url-' + draft.id">URL</label>
+                        <label [attr.for]="'nc-api-url-' + draft.id">URL Estado del API</label>
                         <input
                           [id]="'nc-api-url-' + draft.id"
                           [name]="'apiUrl-' + draft.id"
@@ -263,6 +263,19 @@
                           (ngModelChange)="patchApiField(draft.id, 'url', $event)"
                           maxlength="2000"
                           placeholder="https://api.ejemplo.com/v1"
+                        />
+                      </div>
+
+                      <div class="form-field full-width">
+                        <label [attr.for]="'nc-api-urlDoc-' + draft.id">URL Documentación del API</label>
+                        <input
+                          [id]="'nc-api-urlDoc-' + draft.id"
+                          [name]="'apiUrlDoc-' + draft.id"
+                          type="url"
+                          [ngModel]="draft.api.urlDoc"
+                          (ngModelChange)="patchApiField(draft.id, 'urlDoc', $event)"
+                          maxlength="2000"
+                          placeholder="https://docs.ejemplo.com/api"
                         />
                       </div>
 

@@ -19,6 +19,7 @@ type ApiForm = {
   componentId: number | null;
   apiVersion: string;
   url: string;
+  urlDoc: string;
   protocol: string;
   authenticationMethod: string;
   slaDescription: string;
@@ -73,6 +74,7 @@ export class ApisComponent implements OnInit {
         this.componentName(row.componentId),
         row.apiVersion,
         row.url,
+        row.urlDoc,
         row.protocol,
         row.authenticationMethod,
         row.slaDescription,
@@ -123,6 +125,7 @@ export class ApisComponent implements OnInit {
       componentId,
       apiVersion: row.apiVersion ?? '',
       url: row.url ?? '',
+      urlDoc: row.urlDoc ?? '',
       protocol: row.protocol ?? '',
       authenticationMethod: row.authenticationMethod ?? '',
       slaDescription: row.slaDescription ?? '',
@@ -181,6 +184,7 @@ export class ApisComponent implements OnInit {
 
     const apiVersion = this.form.apiVersion.trim();
     const url = this.form.url.trim();
+    const urlDoc = this.form.urlDoc.trim();
     const protocol = this.form.protocol.trim();
     const authenticationMethod = this.form.authenticationMethod.trim();
     const slaDescription = this.form.slaDescription.trim();
@@ -190,7 +194,11 @@ export class ApisComponent implements OnInit {
       return;
     }
     if (url.length > 2000) {
-      this.formError.set('La URL no puede superar 2000 caracteres.');
+      this.formError.set('La URL Estado del API no puede superar 2000 caracteres.');
+      return;
+    }
+    if (urlDoc.length > 2000) {
+      this.formError.set('La URL Documentación del API no puede superar 2000 caracteres.');
       return;
     }
     if (protocol.length > 30) {
@@ -211,6 +219,7 @@ export class ApisComponent implements OnInit {
         componentId,
         apiVersion: apiVersion || null,
         url: url || null,
+        urlDoc: urlDoc || null,
         protocol: protocol || null,
         authenticationMethod: authenticationMethod || null,
         slaDescription: slaDescription || null,
@@ -233,6 +242,7 @@ export class ApisComponent implements OnInit {
     const createBody: ApiDetailRequest = { componentId };
     if (apiVersion) createBody.apiVersion = apiVersion;
     if (url) createBody.url = url;
+    if (urlDoc) createBody.urlDoc = urlDoc;
     if (protocol) createBody.protocol = protocol;
     if (authenticationMethod) createBody.authenticationMethod = authenticationMethod;
     if (slaDescription) createBody.slaDescription = slaDescription;
@@ -288,6 +298,7 @@ export class ApisComponent implements OnInit {
       componentId: null,
       apiVersion: '',
       url: '',
+      urlDoc: '',
       protocol: '',
       authenticationMethod: '',
       slaDescription: '',

@@ -206,7 +206,7 @@ export class NuevoComponenteModalComponent implements OnInit {
 
   patchApiField(
     draftId: string,
-    field: 'apiVersion' | 'url' | 'protocol' | 'authenticationMethod' | 'slaDescription',
+    field: 'apiVersion' | 'url' | 'urlDoc' | 'protocol' | 'authenticationMethod' | 'slaDescription',
     value: string,
   ): void {
     this.drafts.update((list) =>
@@ -388,7 +388,10 @@ export class NuevoComponenteModalComponent implements OnInit {
         return 'La versión de API no puede superar 50 caracteres.';
       }
       if (draft.api.url.trim().length > 2000) {
-        return 'La URL de API no puede superar 2000 caracteres.';
+        return 'La URL Estado del API no puede superar 2000 caracteres.';
+      }
+      if (draft.api.urlDoc.trim().length > 2000) {
+        return 'La URL Documentación del API no puede superar 2000 caracteres.';
       }
       if (draft.api.protocol.trim().length > 30) {
         return 'El protocolo no puede superar 30 caracteres.';
@@ -525,6 +528,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   ): Observable<number> {
     const apiVersion = payload.api.apiVersion.trim();
     const url = payload.api.url.trim();
+    const urlDoc = payload.api.urlDoc.trim();
     const protocol = payload.api.protocol.trim();
     const authenticationMethod = payload.api.authenticationMethod.trim();
     const slaDescription = payload.api.slaDescription.trim();
@@ -532,6 +536,7 @@ export class NuevoComponenteModalComponent implements OnInit {
     const apiBody: ApiDetailRequest = { componentId };
     if (apiVersion) apiBody.apiVersion = apiVersion;
     if (url) apiBody.url = url;
+    if (urlDoc) apiBody.urlDoc = urlDoc;
     if (protocol) apiBody.protocol = protocol;
     if (authenticationMethod) apiBody.authenticationMethod = authenticationMethod;
     if (slaDescription) apiBody.slaDescription = slaDescription;
@@ -665,6 +670,7 @@ export class NuevoComponenteModalComponent implements OnInit {
       api: {
         apiVersion: '',
         url: '',
+        urlDoc: '',
         protocol: '',
         authenticationMethod: '',
         slaDescription: '',

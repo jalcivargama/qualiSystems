@@ -4,6 +4,7 @@ export interface ApiDetail {
   componentType?: 'API';
   apiVersion?: string | null;
   url?: string | null;
+  urlDoc?: string | null;
   protocol?: string | null;
   authenticationMethod?: string | null;
   slaDescription?: string | null;
