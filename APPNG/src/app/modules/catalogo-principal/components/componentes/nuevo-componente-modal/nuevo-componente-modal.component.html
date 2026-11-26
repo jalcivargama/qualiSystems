@@ -179,14 +179,13 @@
 
                       <div class="form-field">
                         <label [attr.for]="'nc-system-owner-' + draft.id">Área propietaria</label>
-                        <input
+                        <app-searchable-select
                           [id]="'nc-system-owner-' + draft.id"
                           [name]="'ownerArea-' + draft.id"
-                          type="text"
-                          [ngModel]="draft.system.ownerArea"
+                          [options]="areaOptions()"
+                          placeholder="Selecciona un área"
+                          [ngModel]="draft.system.ownerArea || null"
                           (ngModelChange)="patchSystemField(draft.id, 'ownerArea', $event)"
-                          maxlength="200"
-                          placeholder="Ingresa área propietaria"
                         />
                       </div>
 

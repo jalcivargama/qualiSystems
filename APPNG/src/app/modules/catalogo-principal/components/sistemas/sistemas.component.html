@@ -161,13 +161,13 @@
 
           <div class="form-field">
             <label for="field-ownerArea">Área propietaria</label>
-            <input
+            <app-searchable-select
               id="field-ownerArea"
               name="ownerArea"
-              type="text"
-              [(ngModel)]="form.ownerArea"
-              maxlength="200"
-              placeholder="Ingresa área propietaria"
+              [options]="areaOptions()"
+              placeholder="Selecciona un área"
+              [ngModel]="form.ownerArea || null"
+              (ngModelChange)="onOwnerAreaChange($event)"
             />
           </div>
 

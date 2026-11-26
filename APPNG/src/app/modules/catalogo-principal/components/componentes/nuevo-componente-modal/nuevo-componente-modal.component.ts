@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { concatMap, forkJoin, from, Observable, of, switchMap, throwError, toArray } from 'rxjs';
 import { ToastService } from '../../../../../core/toast.service';
+import { AreasService } from '../../../../areas/components/areas/areas.service';
+import { CatalogArea } from '../../../../areas/components/areas/models/catalog-area.model';
 import { PeopleService } from '../../../../personas-y-roles/components/personas/people.service';
 import { Person } from '../../../../personas-y-roles/components/personas/models/person.model';
 import { ResponsibilityRolesService } from '../../../../personas-y-roles/components/roles-de-responsabilidad/responsibility-roles.service';
@@ -54,6 +56,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   private readonly responsibilityRolesService = inject(ResponsibilityRolesService);
   private readonly systemResponsibilitiesService = inject(SystemResponsibilitiesService);
   private readonly technologiesService = inject(TechnologiesService);
+  private readonly areasService = inject(AreasService);
   private readonly componentsService = inject(ComponentsService);
   private readonly systemDetailsService = inject(SystemDetailsService);
   private readonly apisService = inject(ApisService);
@@ -69,6 +72,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly people = signal<Person[]>([]);
   readonly roles = signal<ResponsibilityRole[]>([]);
   readonly technologies = signal<Technology[]>([]);
+  readonly areas = signal<CatalogArea[]>([]);
   readonly drafts = signal<NuevoComponenteDraft[]>([]);
   readonly loadingCatalogs = signal(false);
   readonly saving = signal(false);
@@ -117,6 +121,14 @@ export class NuevoComponenteModalComponent implements OnInit {
       value: Number(role.roleId),
       label: role.roleName?.trim() || String(role.roleId),
       searchText: role.roleCode?.trim() || '',
+    })),
+  );
+
+  readonly areaOptions = computed<SearchableSelectOption[]>(() =>
+    this.areas().map((area) => ({
+      value: area.areaName,
+      label: area.areaName?.trim() || area.areaName,
+      searchText: [area.acronym, area.description].filter(Boolean).join(' '),
     })),
   );
 
@@ -211,12 +223,13 @@ export class NuevoComponenteModalComponent implements OnInit {
   patchSystemField(
     draftId: string,
     field: 'ownerArea' | 'criticality' | 'systemStatus' | 'goLiveDate' | 'endOfLifeDate',
-    value: string,
+    value: string | number | null,
   ): void {
+    const normalized = value == null ? '' : String(value);
     this.drafts.update((list) =>
       list.map((draft) =>
         draft.id === draftId
-          ? { ...draft, system: { ...draft.system, [field]: value } }
+          ? { ...draft, system: { ...draft.system, [field]: normalized } }
           : draft,
       ),
     );
@@ -386,10 +399,6 @@ export class NuevoComponenteModalComponent implements OnInit {
     if (draft.kind === 'SYSTEM') {
       if (!draft.system.systemStatus) return 'Selecciona el estado del sistema.';
 
-      const ownerArea = draft.system.ownerArea.trim();
-      if (ownerArea.length > 200) {
-        return 'El área propietaria no puede superar 200 caracteres.';
-      }
 
       const goLiveDate = draft.system.goLiveDate.trim();
       const endOfLifeDate = draft.system.endOfLifeDate.trim();
@@ -754,6 +763,14 @@ export class NuevoComponenteModalComponent implements OnInit {
         this.technologies.set([]);
         this.loadingCatalogs.set(false);
         this.toastService.error(this.resolveCatalogError(error, 'tecnologías'));
+      },
+    });
+
+    this.areasService.getAllAreas().subscribe({
+      next: (areas) => this.areas.set(areas ?? []),
+      error: (error: HttpErrorResponse) => {
+        this.areas.set([]);
+        this.toastService.error(this.resolveCatalogError(error, 'áreas'));
       },
     });
   }

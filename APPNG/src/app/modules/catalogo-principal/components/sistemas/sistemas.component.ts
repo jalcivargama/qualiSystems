@@ -6,6 +6,8 @@ import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../core/toast.service';
 import { SearchableSelectComponent } from '../../../../shared/ui/searchable-select/searchable-select.component';
 import { SearchableSelectOption } from '../../../../shared/ui/searchable-select/searchable-select.models';
+import { AreasService } from '../../../areas/components/areas/areas.service';
+import { CatalogArea } from '../../../areas/components/areas/models/catalog-area.model';
 import { ComponentsService } from '../componentes/components.service';
 import { CatalogComponent } from '../componentes/models/component.model';
 import { SystemDetailsService } from './system-details.service';
@@ -38,6 +40,7 @@ type SystemForm = {
 export class SistemasComponent implements OnInit {
   private readonly systemDetailsService = inject(SystemDetailsService);
   private readonly componentsService = inject(ComponentsService);
+  private readonly areasService = inject(AreasService);
   private readonly toastService = inject(ToastService);
 
   readonly criticalityOptions: { value: Criticality; label: string }[] = [
@@ -64,6 +67,7 @@ export class SistemasComponent implements OnInit {
 
   readonly rows = signal<SystemRow[]>([]);
   readonly components = signal<CatalogComponent[]>([]);
+  readonly areas = signal<CatalogArea[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
   readonly modalOpen = signal(false);
@@ -98,6 +102,14 @@ export class SistemasComponent implements OnInit {
     })),
   );
 
+  readonly areaOptions = computed<SearchableSelectOption[]>(() =>
+    this.areas().map((area) => ({
+      value: area.areaName,
+      label: area.areaName?.trim() || area.areaName,
+      searchText: [area.acronym, area.description].filter(Boolean).join(' '),
+    })),
+  );
+
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
     const rows = this.rows();
@@ -118,6 +130,7 @@ export class SistemasComponent implements OnInit {
   ngOnInit(): void {
     this.loadSystemDetails();
     this.loadSystemComponents();
+    this.loadAreas();
   }
 
   get canSubmit(): boolean {
@@ -127,6 +140,10 @@ export class SistemasComponent implements OnInit {
 
   onComponentIdChange(value: number | string | null): void {
     this.form.componentId = this.toComponentId(value);
+  }
+
+  onOwnerAreaChange(value: number | string | null): void {
+    this.form.ownerArea = value == null || value === '' ? '' : String(value);
   }
 
   labelForCriticality(value: string | null | undefined): string {
@@ -158,6 +175,7 @@ export class SistemasComponent implements OnInit {
     this.formError.set('');
     this.modalOpen.set(true);
     this.loadSystemComponents();
+    this.loadAreas();
   }
 
   openEdit(row: SystemRow): void {
@@ -175,6 +193,7 @@ export class SistemasComponent implements OnInit {
     };
     this.formError.set('');
     this.modalOpen.set(true);
+    this.loadAreas();
   }
 
   closeModal(): void {
@@ -225,10 +244,6 @@ export class SistemasComponent implements OnInit {
     }
 
     const ownerArea = this.form.ownerArea.trim();
-    if (ownerArea.length > 200) {
-      this.formError.set('El área propietaria no puede superar 200 caracteres.');
-      return;
-    }
 
     const goLiveDate = this.form.goLiveDate.trim();
     const endOfLifeDate = this.form.endOfLifeDate.trim();
@@ -320,6 +335,17 @@ export class SistemasComponent implements OnInit {
       },
       error: () => {
         this.components.set([]);
+      },
+    });
+  }
+
+  private loadAreas(): void {
+    this.areasService.getAllAreas().subscribe({
+      next: (areas) => {
+        this.areas.set(Array.isArray(areas) ? areas : []);
+      },
+      error: () => {
+        this.areas.set([]);
       },
     });
   }
