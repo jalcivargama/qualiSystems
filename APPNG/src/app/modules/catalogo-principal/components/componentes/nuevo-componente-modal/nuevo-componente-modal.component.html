@@ -289,15 +289,17 @@
 
                       <div class="form-field">
                         <label [attr.for]="'nc-api-auth-' + draft.id">Autenticación</label>
-                        <input
+                        <select
                           [id]="'nc-api-auth-' + draft.id"
                           [name]="'apiAuth-' + draft.id"
-                          type="text"
                           [ngModel]="draft.api.authenticationMethod"
                           (ngModelChange)="patchApiField(draft.id, 'authenticationMethod', $event)"
-                          maxlength="100"
-                          placeholder="Ej. Bearer JWT"
-                        />
+                        >
+                          <option value="">Sin definir</option>
+                          @for (option of authenticationMethodOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
                       </div>
 
                       <div class="form-field full-width">

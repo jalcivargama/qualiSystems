@@ -27,6 +27,7 @@ import {
   transformInputToLowerCase,
   transformPasteToLowerCase,
 } from '../../../../../shared/functions/input.functions';
+import { TIPOS_AUTENTIFICACION_OPTIONS } from '../../../../../shared/enum/tipos.autentificacion.enum';
 import { TIPOS_RECURSOS_OPTIONS } from '../../../../../shared/enum/tipos.recuros.enum';
 import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
 import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
@@ -91,6 +92,7 @@ export class NuevoComponenteModalComponent implements OnInit {
   readonly systemStatusOptions = SYSTEM_STATUS_OPTIONS;
   readonly deploymentEnvironments = DEPLOYMENT_ENVIRONMENTS;
   readonly resourceTypeOptions = TIPOS_RECURSOS_OPTIONS;
+  readonly authenticationMethodOptions = TIPOS_AUTENTIFICACION_OPTIONS;
   readonly maxComponents = MAX_NUEVO_COMPONENTES;
   readonly transformToLowerCase = transformInputToLowerCase;
   readonly transformPasteToLower = transformPasteToLowerCase;
@@ -433,9 +435,6 @@ export class NuevoComponenteModalComponent implements OnInit {
       }
       if (draft.api.protocol.trim().length > 30) {
         return 'El protocolo no puede superar 30 caracteres.';
-      }
-      if (draft.api.authenticationMethod.trim().length > 100) {
-        return 'El método de autenticación no puede superar 100 caracteres.';
       }
       if (draft.deployments.some((deployment) => deployment.url.trim().length > 2000)) {
         return 'La URL de despliegue no puede superar 2000 caracteres.';

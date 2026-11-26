@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ToastService } from '../../../../../core/toast.service';
+import { TIPOS_AUTENTIFICACION_OPTIONS } from '../../../../../shared/enum/tipos.autentificacion.enum';
 import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
 import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
 import { ComponentsService } from '../../componentes/components.service';
@@ -40,6 +41,7 @@ export class ApisComponent implements OnInit {
   private readonly toastService = inject(ToastService);
 
   readonly protocolOptions = ['REST', 'SOAP', 'GraphQL', 'gRPC', 'HTTPS', 'HTTP', 'Otro'];
+  readonly authenticationMethodOptions = TIPOS_AUTENTIFICACION_OPTIONS;
 
   readonly rows = signal<ApiRow[]>([]);
   readonly components = signal<CatalogComponent[]>([]);
@@ -224,11 +226,6 @@ export class ApisComponent implements OnInit {
       this.formError.set('El protocolo no puede superar 30 caracteres.');
       return;
     }
-    if (authenticationMethod.length > 100) {
-      this.formError.set('El método de autenticación no puede superar 100 caracteres.');
-      return;
-    }
-
     this.saving.set(true);
     this.formError.set('');
     this.form.componentId = componentId;

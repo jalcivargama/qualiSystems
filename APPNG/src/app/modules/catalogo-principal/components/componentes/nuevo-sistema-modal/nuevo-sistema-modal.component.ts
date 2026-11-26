@@ -3,6 +3,7 @@ import { Component, OnInit, computed, inject, input, output, signal } from '@ang
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ToastService } from '../../../../../core/toast.service';
+import { TIPOS_AUTENTIFICACION_OPTIONS } from '../../../../../shared/enum/tipos.autentificacion.enum';
 import { SearchableSelectComponent } from '../../../../../shared/ui/searchable-select/searchable-select.component';
 import { SearchableSelectOption } from '../../../../../shared/ui/searchable-select/searchable-select.models';
 import { PeopleService } from '../../../../personas-y-roles/components/personas/people.service';
@@ -10,7 +11,6 @@ import { Person } from '../../../../personas-y-roles/components/personas/models/
 import { TechnologiesService } from '../../../../tecnologia/components/tecnologias/technologies.service';
 import { Technology } from '../../../../tecnologia/components/tecnologias/models/technology.model';
 import {
-  AUTH_METHOD_OPTIONS,
   COMPONENT_KIND_OPTIONS,
   ENVIRONMENT_CODES,
   EnvConfig,
@@ -58,7 +58,7 @@ export class NuevoSistemaModalComponent implements OnInit {
 
   readonly componentKindOptions = COMPONENT_KIND_OPTIONS;
   readonly protocolOptions = PROTOCOL_OPTIONS;
-  readonly authMethodOptions = AUTH_METHOD_OPTIONS;
+  readonly authMethodOptions = TIPOS_AUTENTIFICACION_OPTIONS;
   readonly environmentCodes = ENVIRONMENT_CODES;
 
   form: SystemBaseForm = this.emptyBaseForm();

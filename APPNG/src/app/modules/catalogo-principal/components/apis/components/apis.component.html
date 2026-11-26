@@ -207,14 +207,16 @@
 
           <div class="form-field">
             <label for="field-authenticationMethod">Autenticación</label>
-            <input
+            <select
               id="field-authenticationMethod"
               name="authenticationMethod"
-              type="text"
               [(ngModel)]="form.authenticationMethod"
-              maxlength="100"
-              placeholder="Ej. Bearer JWT"
-            />
+            >
+              <option value="">Sin definir</option>
+              @for (option of authenticationMethodOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
           </div>
 
           <div class="form-field full-width">
