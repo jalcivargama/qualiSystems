@@ -32,6 +32,39 @@
   </div>
 </div>
 
+<div class="catalog-filters">
+  <label class="filter-field">
+    <span>Origen</span>
+    <app-searchable-select
+      name="filterOriginId"
+      [options]="originComponentOptions()"
+      placeholder="Todos los orígenes"
+      [ngModel]="filterOriginId()"
+      (ngModelChange)="onFilterOriginChange($event)"
+    />
+  </label>
+  <label class="filter-field">
+    <span>Destino</span>
+    <app-searchable-select
+      name="filterTargetId"
+      [options]="originComponentOptions()"
+      placeholder="Todos los destinos"
+      [ngModel]="filterTargetId()"
+      (ngModelChange)="onFilterTargetChange($event)"
+    />
+  </label>
+  <label class="filter-field">
+    <span>Tipo</span>
+    <app-searchable-select
+      name="filterDependencyTypeId"
+      [options]="dependencyTypeOptions()"
+      placeholder="Todos los tipos"
+      [ngModel]="filterDependencyTypeId()"
+      (ngModelChange)="onFilterDependencyTypeChange($event)"
+    />
+  </label>
+</div>
+
 <section class="table-card">
   <div class="table-scroll">
     <table>
@@ -84,15 +117,15 @@
             <tr>
               <td class="empty-cell" colspan="10">
                 <span class="empty-illustration">▤</span>
-                <strong>{{ searchTerm() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
+                <strong>{{ hasActiveFilters() ? 'No encontramos resultados' : 'Sin registros' }}</strong>
                 <small>
                   {{
-                    searchTerm()
-                      ? 'Prueba con otro término de búsqueda.'
+                    hasActiveFilters()
+                      ? 'Prueba ajustando origen, destino, tipo o la búsqueda.'
                       : 'Crea la primera dependencia para comenzar.'
                   }}
                 </small>
-                @if (!searchTerm()) {
+                @if (!hasActiveFilters()) {
                   <button class="text-create" type="button" (click)="openCreate()">＋ Crear registro</button>
                 }
               </td>

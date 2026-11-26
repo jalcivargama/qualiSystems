@@ -90,6 +90,9 @@ export class DependenciasComponent implements OnInit {
   readonly dependencyTypes = signal<DependencyType[]>([]);
   readonly loading = signal(false);
   readonly searchTerm = signal('');
+  readonly filterOriginId = signal<number | null>(null);
+  readonly filterTargetId = signal<number | null>(null);
+  readonly filterDependencyTypeId = signal<number | null>(null);
   readonly modalOpen = signal(false);
   readonly isEditing = signal(false);
   readonly editingDependencyId = signal<number | null>(null);
@@ -99,12 +102,26 @@ export class DependenciasComponent implements OnInit {
   readonly selectedOriginId = signal<number | null>(null);
   form: DependencyForm = this.emptyForm();
 
+  readonly hasActiveFilters = computed(
+    () =>
+      !!this.searchTerm().trim() ||
+      this.filterOriginId() != null ||
+      this.filterTargetId() != null ||
+      this.filterDependencyTypeId() != null,
+  );
+
   readonly filteredRows = computed(() => {
     const query = this.searchTerm().trim().toLocaleLowerCase();
-    const rows = this.rows();
-    if (!query) return rows;
-    return rows.filter((row) =>
-      [
+    const originId = this.filterOriginId();
+    const targetId = this.filterTargetId();
+    const typeId = this.filterDependencyTypeId();
+
+    return this.rows().filter((row) => {
+      if (originId != null && Number(row.originComponentId) !== originId) return false;
+      if (targetId != null && Number(row.targetComponentId) !== targetId) return false;
+      if (typeId != null && Number(row.dependencyTypeId) !== typeId) return false;
+      if (!query) return true;
+      return [
         row.dependencyId,
         this.componentName(row.originComponentId),
         this.componentName(row.targetComponentId),
@@ -114,8 +131,8 @@ export class DependenciasComponent implements OnInit {
         this.labelForCriticality(row.criticality),
         row.description,
         row.createdAt,
-      ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query)),
-    );
+      ].some((value) => String(value ?? '').toLocaleLowerCase().includes(query));
+    });
   });
 
   readonly availableTargetComponents = computed(() => {
@@ -179,6 +196,18 @@ export class DependenciasComponent implements OnInit {
     this.form.dependencyTypeId = this.toId(value);
   }
 
+  onFilterOriginChange(value: number | string | null): void {
+    this.filterOriginId.set(this.toId(value));
+  }
+
+  onFilterTargetChange(value: number | string | null): void {
+    this.filterTargetId.set(this.toId(value));
+  }
+
+  onFilterDependencyTypeChange(value: number | string | null): void {
+    this.filterDependencyTypeId.set(this.toId(value));
+  }
+
   componentName(componentId: number | null | undefined): string {
     if (componentId == null) return '—';
     const match = this.components().find(
@@ -223,6 +252,9 @@ export class DependenciasComponent implements OnInit {
 
   clearSearch(): void {
     this.searchTerm.set('');
+    this.filterOriginId.set(null);
+    this.filterTargetId.set(null);
+    this.filterDependencyTypeId.set(null);
   }
 
   openCreate(): void {
