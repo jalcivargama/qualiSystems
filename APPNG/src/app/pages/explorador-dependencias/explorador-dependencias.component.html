@@ -1,8 +1,8 @@
 <div class="explorer-heading">
   <div>
-    <div class="explorer-breadcrumbs"><a routerLink="/dashboard">Inicio</a><span>/</span><strong>Explorar dependencias</strong></div>
+    <div class="explorer-breadcrumbs"><a routerLink="/dashboard">Inicio</a><span>/</span><strong>{{ diagramMode ? 'Arquitectura' : 'Explorar dependencias' }}</strong></div>
     <span class="explorer-eyebrow">ARQUITECTURA CONECTADA</span>
-    <h1>Explorador de dependencias</h1>
+    <h1>{{ diagramMode ? 'Arquitectura' : 'Explorador de dependencias' }}</h1>
     <p>Selecciona un componente y navega su árbol de dependencias salientes.</p>
   </div>
   <div class="demo-badge"><i></i> Datos de demostración</div>
@@ -62,9 +62,14 @@
         <div class="root-label"><i></i> INICIO DEL RECORRIDO</div>
       }
 
-      <button class="component-card-trigger" type="button" (click)="toggle(node)"
+      <button class="component-card-trigger" [class.diagram-summary]="diagramMode" type="button" (click)="toggle(node)"
         [disabled]="node.cycle || node.loading"
+        [attr.aria-busy]="node.loading || null"
+        [attr.aria-label]="diagramMode ? (node.expanded ? 'Contraer dependencias de ' : 'Expandir dependencias de ') + node.component['name'] : null"
         [attr.aria-expanded]="node.expanded">
+        @if (diagramMode && componentImage(node.component); as image) {
+          <img class="diagram-type-icon" [src]="image" alt="">
+        }
         <span class="component-type">{{ explorer.componentType(node.component) }}</span>
         <strong class="component-title">{{ node.component['name'] }}</strong>
         <span class="component-summary">
@@ -72,31 +77,38 @@
           <span><small>Acrónimo</small><b>{{ node.component['acronym'] || '—' }}</b></span>
           <span><small>Estatus</small><b class="status" [class.inactive]="node.component['is_active'] === 'N'"><i></i>{{ explorer.componentStatus(node.component) }}</b></span>
         </span>
-        <span class="expand-prompt">
-          @if (node.loading) {
-            Cargando dependencias...
-          } @else if (node.cycle) {
-            Ciclo detectado <span class="cycle-indicator">↻</span>
-          } @else if (node.expanded) {
-            Contraer dependencias <span class="expand-chevron">⌃</span>
-          } @else {
-            Explorar dependencias <span class="expand-chevron">⌄</span>
-          }
-        </span>
+        @if (!diagramMode) {
+          <span class="expand-prompt">
+            @if (node.loading) {
+              Cargando dependencias...
+            } @else if (node.cycle) {
+              Ciclo detectado <span class="cycle-indicator">↻</span>
+            } @else if (node.expanded) {
+              Contraer dependencias <span class="expand-chevron">⌃</span>
+            } @else {
+              Explorar dependencias <span class="expand-chevron">⌄</span>
+            }
+          </span>
+        }
       </button>
 
-      <button
-        class="details-toggle expand-prompt"
-        type="button"
-        [attr.aria-expanded]="detailsOpen(node)"
-        (click)="toggleDetails(node)"
-      >
-        <span>◈</span>
-        {{ detailsOpen(node) ? 'Ocultar detalles' : 'Detalles' }}
-        <span class="expand-chevron">{{ detailsOpen(node) ? '⌃' : '⌄' }}</span>
-      </button>
+      @if (diagramMode && node.loading) {
+        <div class="leaf-note" role="status">Cargando dependencias...</div>
+      }
+      @if (!diagramMode) {
+        <button
+          class="details-toggle expand-prompt"
+          type="button"
+          [attr.aria-expanded]="detailsOpen(node)"
+          (click)="toggleDetails(node)"
+        >
+          <span>◈</span>
+          {{ detailsOpen(node) ? 'Ocultar detalles' : 'Detalles' }}
+          <span class="expand-chevron">{{ detailsOpen(node) ? '⌃' : '⌄' }}</span>
+        </button>
+      }
 
-      @if (detailsOpen(node)) {
+      @if (!diagramMode && detailsOpen(node)) {
         <div class="component-details">
           @if (detailsFor(node.component); as detail) {
             @if (detail.description) {

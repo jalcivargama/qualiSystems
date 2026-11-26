@@ -61,3 +61,5 @@ El login es solamente una simulación del prototipo, no un control de acceso seg
 Las relaciones del prototipo utilizan identificadores de muestra; no validan las claves foráneas de Oracle. Los formularios, búsqueda, altas, edición y eliminación permiten recorrer los flujos de interfaz con datos de demostración.
 
 El menú **Inicio → Explorar dependencias** abre un árbol navegable desde cualquier componente. Las relaciones se recorren desde el origen hacia el destino; cada tarjeta presenta el detalle de subtipo disponible, responsables y roles, stack y despliegues. Los ciclos se identifican y se detienen para evitar recursión infinita.
+
+**Inicio → Arquitectura** abre una versión resumida del mismo árbol, con imágenes por tipo de componente y sin detalles. Selecciona una tarjeta para expandir o contraer sus dependencias; utiliza las mismas API que el explorador.

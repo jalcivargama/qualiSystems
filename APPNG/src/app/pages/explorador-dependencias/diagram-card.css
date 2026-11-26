@@ -1,0 +1,17 @@
+.diagram-type-icon {
+  float: left;
+  width: 36px;
+  height: 36px;
+  margin: 0 9px 5px 0;
+  object-fit: contain;
+}
+
+.diagram-summary {
+  padding-bottom: 12px;
+}
+
+.diagram-summary .component-summary {
+  clear: both;
+  padding-bottom: 0;
+  border-bottom: 0;
+}

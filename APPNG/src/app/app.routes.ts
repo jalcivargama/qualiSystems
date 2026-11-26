@@ -6,6 +6,7 @@ import { ShellComponent } from './layout/shell.component';
 import { LoginComponent } from './pages/login/login.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { ExploradorDependenciasComponent } from './pages/explorador-dependencias/explorador-dependencias.component';
+import { ComponentDiagramComponent } from './pages/component-diagram/component-diagram.component';
 import { ComponentesComponent } from './modules/catalogo-principal/components/componentes/components/componentes.component';
 import { SistemasComponent } from './modules/catalogo-principal/components/sistemas/sistemas.component';
 import { ApisComponent } from './modules/catalogo-principal/components/apis/components/apis.component';
@@ -40,6 +41,7 @@ export const routes: Routes = [
       { path: 'dashboard', component: DashboardComponent },
       { path: 'busqueda-componentes', component: BusquedaComponentesComponent },
       { path: 'explorador-dependencias', component: ExploradorDependenciasComponent },
+      { path: 'component-diagram', component: ComponentDiagramComponent },
       { path: 'catalogos/catalog_component', component: ComponentesComponent },
       { path: 'catalogos/system_detail', component: SistemasComponent },
       { path: 'catalogos/api_detail', component: ApisComponent },

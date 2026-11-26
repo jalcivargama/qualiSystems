@@ -30,6 +30,7 @@ export class ShellComponent {
       items: [
         { label: 'Dashboard', route: '/dashboard' },
         { label: 'Explorar dependencias', route: '/explorador-dependencias' },
+        { label: 'Arquitectura', route: '/component-diagram' },
         { label: 'Búsqueda de componentes', route: '/busqueda-componentes' },
       ],
     },

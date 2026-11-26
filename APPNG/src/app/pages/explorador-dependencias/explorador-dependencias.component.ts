@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { take } from 'rxjs';
@@ -31,9 +31,10 @@ import {
     SearchableSelectComponent,
   ],
   templateUrl: './explorador-dependencias.component.html',
-  styleUrls: ['./explorador-dependencias.component.css', './dependency-connections.css'],
+  styleUrls: ['./explorador-dependencias.component.css', './dependency-connections.css', './diagram-card.css'],
 })
 export class ExploradorDependenciasComponent implements OnInit {
+  @Input() diagramMode = false;
   private readonly api = inject(DependencyExplorerApiService);
   private readonly toastService = inject(ToastService);
   private readonly changeDetector = inject(ChangeDetectorRef);
@@ -181,6 +182,17 @@ export class ExploradorDependenciasComponent implements OnInit {
 
   readable(value: string): string {
     return value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  }
+
+  componentImage(component: MockRecord): string | null {
+    switch (component['component_type']) {
+      case 'DATABASE': return 'assets/database.png';
+      case 'SYSTEM': return 'assets/system.png';
+      case 'API': return 'assets/api.png';
+      case 'INFRASTRUCTURE':
+      case 'INFRAESTRUCTURE': return 'assets/server.png';
+      default: return null;
+    }
   }
 
   private loadComponents(): void {
