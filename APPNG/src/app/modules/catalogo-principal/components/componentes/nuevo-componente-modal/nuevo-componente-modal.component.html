@@ -1,11 +1,10 @@
 @if (open()) {
-  <div class="modal-backdrop" (click)="close()">
+  <div class="modal-backdrop">
     <section
       class="record-modal"
       role="dialog"
       aria-modal="true"
       aria-label="Nuevo componente"
-      (click)="$event.stopPropagation()"
     >
       <div class="modal-heading">
         <div>
@@ -16,7 +15,10 @@
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="close()">×</button>
       </div>
 
-      <form (ngSubmit)="submit()">
+      <form
+        (ngSubmit)="submit()"
+        (keydown.enter)="$any($event.target).tagName === 'TEXTAREA' ? null : $event.preventDefault()"
+      >
         <div class="section-block first-section">
           <div class="section-heading">
             <div>
