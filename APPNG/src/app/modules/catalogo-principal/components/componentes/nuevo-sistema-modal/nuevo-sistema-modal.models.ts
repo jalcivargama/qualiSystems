@@ -55,16 +55,6 @@ export const ENVIRONMENT_CODES: EnvironmentCode[] = ['DEV', 'QA', 'PROD'];
 
 export const PROTOCOL_OPTIONS = ['REST', 'SOAP', 'GraphQL', 'gRPC', 'Otro'] as const;
 
-export const AUTH_METHOD_OPTIONS = [
-  'Ninguna',
-  'Basic',
-  'JWT',
-  'Bearer',
-  'OAuth 2.0',
-  'API Key',
-  'mTLS',
-] as const;
-
 export const COMPONENT_KIND_OPTIONS: { value: SystemComponentKind; label: string }[] = [
   { value: 'FRONTEND', label: 'Frontend' },
   { value: 'API', label: 'API' },

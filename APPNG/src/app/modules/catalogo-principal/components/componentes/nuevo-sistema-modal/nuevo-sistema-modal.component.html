@@ -154,8 +154,9 @@
                         [ngModel]="component.authenticationMethod"
                         (ngModelChange)="patchApiField(component.id, 'authenticationMethod', $event)"
                       >
-                        @for (auth of authMethodOptions; track auth) {
-                          <option [value]="auth">{{ auth }}</option>
+                        <option value="">Sin definir</option>
+                        @for (option of authMethodOptions; track option.value) {
+                          <option [value]="option.value">{{ option.label }}</option>
                         }
                       </select>
                     </div>

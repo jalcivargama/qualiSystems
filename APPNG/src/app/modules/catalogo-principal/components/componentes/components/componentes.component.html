@@ -157,7 +157,10 @@
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="closeModal()">×</button>
       </div>
 
-      <form (ngSubmit)="save()">
+      <form
+        (ngSubmit)="save()"
+        (keydown.enter)="$any($event.target).tagName === 'TEXTAREA' ? null : $event.preventDefault()"
+      >
         <div class="form-grid">
           <div class="form-field">
             <label for="field-componentType">Tipo <i>*</i></label>

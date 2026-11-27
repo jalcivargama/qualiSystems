@@ -1,11 +1,10 @@
 @if (open()) {
-  <div class="modal-backdrop" (click)="close()">
+  <div class="modal-backdrop">
     <section
       class="record-modal"
       role="dialog"
       aria-modal="true"
       aria-label="Nuevo componente"
-      (click)="$event.stopPropagation()"
     >
       <div class="modal-heading">
         <div>
@@ -16,7 +15,10 @@
         <button class="modal-close" type="button" aria-label="Cerrar" (click)="close()">×</button>
       </div>
 
-      <form (ngSubmit)="submit()">
+      <form
+        (ngSubmit)="submit()"
+        (keydown.enter)="$any($event.target).tagName === 'TEXTAREA' ? null : $event.preventDefault()"
+      >
         <div class="section-block first-section">
           <div class="section-heading">
             <div>
@@ -177,14 +179,13 @@
 
                       <div class="form-field">
                         <label [attr.for]="'nc-system-owner-' + draft.id">Área propietaria</label>
-                        <input
+                        <app-searchable-select
                           [id]="'nc-system-owner-' + draft.id"
                           [name]="'ownerArea-' + draft.id"
-                          type="text"
-                          [ngModel]="draft.system.ownerArea"
+                          [options]="areaOptions()"
+                          placeholder="Selecciona un área"
+                          [ngModel]="draft.system.ownerArea || null"
                           (ngModelChange)="patchSystemField(draft.id, 'ownerArea', $event)"
-                          maxlength="200"
-                          placeholder="Ingresa área propietaria"
                         />
                       </div>
 
@@ -288,15 +289,17 @@
 
                       <div class="form-field">
                         <label [attr.for]="'nc-api-auth-' + draft.id">Autenticación</label>
-                        <input
+                        <select
                           [id]="'nc-api-auth-' + draft.id"
                           [name]="'apiAuth-' + draft.id"
-                          type="text"
                           [ngModel]="draft.api.authenticationMethod"
                           (ngModelChange)="patchApiField(draft.id, 'authenticationMethod', $event)"
-                          maxlength="100"
-                          placeholder="Ej. Bearer JWT"
-                        />
+                        >
+                          <option value="">Sin definir</option>
+                          @for (option of authenticationMethodOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                          }
+                        </select>
                       </div>
 
                       <div class="form-field full-width">
